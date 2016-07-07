@@ -20,6 +20,7 @@
 #include "Utils/kernelAPI.h"
 #include "Queues/ce.h"
 #include "Cmds/setFeatures.h"
+#include "Cmds/featureDefs.h"
 #include "Cmds/formatNVM.h"
 #include "Utils/io.h"
 #include "Exception/frmwkEx.h"
@@ -41,11 +42,14 @@ VerifySpecCompatibility(SpecRev specRev)
 
     if (gRegisters->Read(CTLSPC_VS, versionReg) == false)
         return false;
-    hdwMajor = (uint16_t)(versionReg >> 16);
-    hdwMinor = (uint16_t)(versionReg >> 0);
+    hdwMajor = (uint16_t)((versionReg & VS_MJR) >> VS_SH_MJR);
+    hdwMinor = (uint16_t)((versionReg & VS_MNR) >> VS_SH_MNR);
 
     switch (specRev) {
     case SPECREV_10b:   tgtMajor = 1;  tgtMinor = 0;  break;
+    case SPECREV_11:    tgtMajor = 1;  tgtMinor = 1;  break;
+    case SPECREV_12:    tgtMajor = 1;  tgtMinor = 2;  break;
+
     default:
         LOG_ERR("Requesting comparison against unknown SpecRev=%d", specRev);
         return false;
@@ -54,8 +58,15 @@ VerifySpecCompatibility(SpecRev specRev)
     if ((tgtMajor != hdwMajor) || (tgtMinor != hdwMinor)) {
         LOG_ERR("(Targeted vs hdw) spec rev incompatibility (%d.%d != %d.%d)",
             tgtMajor, tgtMinor, hdwMajor, hdwMinor);
-        return false;
+        sprintf(revision_warning, "WARNING: hardware targets spec v%d.%d but "
+            "tests were for spec v%d.%d\n", hdwMajor, hdwMinor, tgtMajor,
+            tgtMinor);
+        // return false;
     }
+
+    else
+      revision_warning[0] = '\0';
+
     return true;
 }
 
@@ -92,7 +103,7 @@ CompareGolden(Golden &golden)
         for (size_t i = 0; i < golden.cmds.size(); i++) {
             LOG_NRM("Identify cmd #%ld", i);
             LOG_NRM("  Identify:DW1.nsid = 0x%02x", golden.cmds[i].nsid);
-            LOG_NRM("  Identify.DW10.cns = %c", golden.cmds[i].cns ? 'T' : 'F');
+            LOG_NRM("  Identify.DW10.cns = 0x%02x", golden.cmds[i].cns);
             LOG_NRM("  sizeof(Identify.raw) = %ld", golden.cmds[i].raw.size());
             LOG_NRM("  sizeof(Identify.mask) = %ld",
                 golden.cmds[i].mask.size());
@@ -172,7 +183,7 @@ ReportCompareResults(Golden &golden, SharedMemBufferPtr idMem, size_t idCmdNum,
     int lastProcessed = -1;
     uint16_t LstOffset;
     uint16_t nextOffset;
-    #define ZZ(a, b, c, d)         { b, c, d },
+    #define ZZ(a, b, c, d, e, f)         { b, c, d, e, f },
     IdentifyDataType idCtrlrCapMetrics[] =
     {
         IDCTRLRCAP_TABLE
@@ -354,7 +365,7 @@ SetFeaturesNumberOfQueues(NumQueues &numQueues)
         LOG_NRM("Create the cmd to carry this data to the DUT");
         SharedSetFeaturesPtr sfNumOfQ =
             SharedSetFeaturesPtr(new SetFeatures());
-        sfNumOfQ->SetFID(BaseFeatures::FID_NUM_QUEUES);
+        sfNumOfQ->SetFID(FID[FID_NUM_QUEUES]);
         sfNumOfQ->SetNumberOfQueues(numQueues.ncqr, numQueues.nsqr);
 
         IO::SendAndReapCmd("tnvme", "queues", CALC_TIMEOUT_ms(1),

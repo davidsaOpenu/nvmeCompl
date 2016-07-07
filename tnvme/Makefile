@@ -19,7 +19,7 @@
 APP_NAME = tnvme
 export CC = g++				# Mods here affect all sub-makes
 #export DFLAGS = -g -DDEBUG		# comment here affects all sub-makes
-export CFLAGS = -O0 -W -Wall -Werror -std=c++11 -Wno-unused-variable #mods here affect all sub-makes
+export CFLAGS = -O0 -W -Wall -Werror -std=c++0x #mods here affect all sub-makes
 LDFLAGS = $(foreach stem, $(SUBDIRS),./$(stem)/lib$(stem).a)
 INCLUDES = -I./ -I../
 
@@ -52,6 +52,9 @@ SUBDIRS:=			\
 	GrpNVMWriteCmd		\
 	GrpNVMWriteReadCombo	\
 	GrpNVMWriteUncorrectCmd	\
+	GrpAdminNamespaceManagement \
+	GrpReservationsHostA    \
+	GrpReservationsHostB    \
 	GrpPciRegisters		\
 	GrpQueues		\
 	GrpResets		\
@@ -67,6 +70,7 @@ SOURCES:=			\
 	test.cpp		\
 	testRef.cpp		\
 	testDescribe.cpp	\
+	testResults.cpp	\
 	tnvme.cpp		\
 	tnvmeHelpers.cpp	\
 	tnvmeParsers.cpp	\

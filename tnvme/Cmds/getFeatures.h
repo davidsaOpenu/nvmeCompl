@@ -24,7 +24,7 @@ class GetFeatures;    // forward definition
 typedef boost::shared_ptr<GetFeatures>              SharedGetFeaturesPtr;
 typedef boost::shared_ptr<const GetFeatures>        ConstSharedGetFeaturesPtr;
 #define CAST_TO_GETFEATURES(shared_trackable_ptr)   \
-        boost::shared_polymorphic_downcast<GetFeatures>(shared_trackable_ptr);
+        boost::dynamic_pointer_cast<GetFeatures>(shared_trackable_ptr);
 
 
 /**
@@ -48,6 +48,11 @@ public:
      * @param iv Specify the interrupt vec for which the config settings needed.
      */
     void SetIntVecConfigIV(uint16_t iv);
+    /**
+     * Sets the Select (SEL) field to what ever the user inputs
+     * @param mask the new value of the SEL field
+     */
+    void SetSelField(uint8_t mask);
 };
 
 

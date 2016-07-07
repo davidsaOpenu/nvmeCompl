@@ -29,7 +29,7 @@ namespace GrpCtrlRegisters {
  * 1) See notes in the header file of the Test base class
  * \endverbatim
  */
-class AllCtrlRegs_r10b : public Test
+class AllCtrlRegs_r10b : virtual public Test
 {
 public:
     AllCtrlRegs_r10b(string grpName, string testName);
@@ -48,31 +48,31 @@ protected:
     virtual void RunCoreTest();
     virtual RunType RunnableCoreTest(bool preserve);
 
-
-private:
-    ///////////////////////////////////////////////////////////////////////////
-    // Adding a member variable? Then edit the copy constructor and operator=().
-    ///////////////////////////////////////////////////////////////////////////
     /**
      * Validate the specified ctrl'r register RO bits report correct values if
      * and only if they are not vendor specific.
      * @param reg Pass the register to validate
      * @return returns upon success, otherwise throws exception
      */
-    void ValidateCtlRegisterROAttribute(CtlSpc reg);
+    virtual void ValidateCtlRegisterROAttribute(CtlSpc reg);
 
     /**
      * Validate all the registers have default values being reported for
      * the RO bits which are not vendor specific.
      * @return returns upon success, otherwise throws exception
      */
-    void ValidateDefaultValues();
+    virtual void ValidateDefaultValues();
 
     /**
      * Validate all the registers hare RO after attempting to write to them.
      * @return returns upon success, otherwise throws exception
      */
-    void ValidateROBitsAfterWriting();
+    virtual void ValidateROBitsAfterWriting();
+
+private:
+    ///////////////////////////////////////////////////////////////////////////
+    // Adding a member variable? Then edit the copy constructor and operator=().
+    ///////////////////////////////////////////////////////////////////////////
 };
 
 }   // namespace

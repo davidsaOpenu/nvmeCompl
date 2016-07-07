@@ -20,7 +20,11 @@ SRC =					\
 	grpAdminGetFeatCmd.cpp		\
 	createResources_r10b.cpp	\
 	invalidFieldInCmd_r10b.cpp	\
-	unsupportRrvdFields_r10b.cpp
+	invalidFieldInCmd_r11.cpp	\
+	invalidFieldInCmd_r12.cpp	\
+	unsupportRsvdFields_r10b.cpp \
+	unsupportRsvdFields_r11b.cpp \
+	unsupportRsvdFields_r12.cpp
 
 .SUFFIXES: .cpp
 
@@ -36,7 +40,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)

@@ -5,7 +5,7 @@
 set +x
 
 echo "run all"
-
+#:'
 ./tnvme --test=0 > test0.txt 2>&1
 ./tnvme --test=1 > test1.txt 2>&1
 ./tnvme --test=2 > test2.txt 2>&1
@@ -33,10 +33,11 @@ echo "run all"
 ./tnvme --test=24 > test24.txt 2>&1
 
 wait
+#'
 
 echo "check sanity"
 
-if [ ! -e test0.txt ] || [ $(grep -c "failed       : 1" test0.txt) -ne 1 ] ||   #one test fails
+if [ ! -e test0.txt ] || [ $(grep -c "failed       : 0" test0.txt) -ne 1 ] ||  
    [ ! -e test1.txt ] || [ $(grep -c "failed       : 0" test1.txt) -ne 1 ] || 
    [ ! -e test2.txt ] || [ $(grep -c "failed       : 0" test2.txt) -ne 1 ] || 
    [ ! -e test3.txt ] || [ $(grep -c "failed       : 0" test3.txt) -ne 1 ] ||
@@ -52,8 +53,15 @@ if [ ! -e test0.txt ] || [ $(grep -c "failed       : 1" test0.txt) -ne 1 ] ||   
    [ ! -e test13.txt ] || [ $(grep -c "failed       : 0" test13.txt) -ne 1 ] || 
    [ ! -e test14.txt ] || [ $(grep -c "failed       : 0" test14.txt) -ne 1 ] || 
    [ ! -e test15.txt ] || [ $(grep -c "failed       : 0" test15.txt) -ne 1 ] || 
+
    [ ! -e test16.txt ] || [ $(grep -c "failed       : 1" test16.txt) -ne 1 ] ||  #one test fails
+   [ ! -e test16.txt ] || [ $(grep -c "tnvme:tnvme.cpp:834:    Tests Failed :" test16.txt) -ne 1 ] ||
+   [ ! -e test16.txt ] || [ $(grep -c "tnvme:tnvme.cpp:838:       16:1.0.0" test16.txt) -ne 1 ] ||
+
    [ ! -e test17.txt ] || [ $(grep -c "failed       : 1" test17.txt) -ne 1 ] ||  #one test fails
+   [ ! -e test16.txt ] || [ $(grep -c "tnvme:tnvme.cpp:834:    Tests Failed :" test17.txt) -ne 1 ] ||
+   [ ! -e test16.txt ] || [ $(grep -c "tnvme:tnvme.cpp:838:       17:1.0.0" test17.txt) -ne 1 ] ||
+
    [ ! -e test18.txt ] || [ $(grep -c "failed       : 0" test18.txt) -ne 1 ] || 
    [ ! -e test19.txt ] || [ $(grep -c "failed       : 0" test19.txt) -ne 1 ] || 
    [ ! -e test20.txt ] || [ $(grep -c "failed       : 0" test20.txt) -ne 1 ] || 

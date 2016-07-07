@@ -218,6 +218,24 @@ CQ::PeekCE(uint16_t indexPtr)
     throw FrmwkEx(HERE, "Unable to locate index within Q");
 }
 
+union CE
+CQ::PeekCEwithCID(uint16_t CIDtoPeek)
+{
+    union CE *dataPtr;
+
+    if (GetIsContig())
+        dataPtr = (union CE *)mContigBuf;
+    else
+        dataPtr = (union CE *)mDiscontigBuf->GetBuffer();
+
+    for (uint32_t i = 0; i < GetNumEntries(); i++, dataPtr++) {
+        if (dataPtr->n.CID == CIDtoPeek)
+            return *dataPtr;
+    }
+
+    throw FrmwkEx(HERE, "Unable to locate CID within CQ");
+}
+
 
 void
 CQ::LogCE(uint16_t indexPtr)
@@ -248,7 +266,7 @@ CQ::ReapInquiry(uint32_t &isrCount, bool reportOn0)
 
     inq.q_id = GetQId();
     if ((rc = ioctl(mFd, NVME_IOCTL_REAP_INQUIRY, &inq)) < 0)
-        throw FrmwkEx(HERE, "Error during reap inquiry, rc =%d", rc);
+        throw FrmwkEx(HERE, "Error during reap inquiry, rc = %d", rc);
 
     isrCount = inq.isr_count;
     if (inq.num_remaining || reportOn0) {
@@ -296,7 +314,7 @@ CQ::ReapInquiryWaitAny(uint32_t ms, uint32_t &numCE, uint32_t &isrCount)
 
 
 bool
-CQ::ReapInquiryWaitSpecify(uint32_t ms, uint32_t numTil, uint32_t &numCE,
+CQ::DoReapInquiry(uint32_t ms, uint32_t numTil, uint32_t &numCE,
     uint32_t &isrCount)
 {
     uint32_t delta;
@@ -319,18 +337,39 @@ CQ::ReapInquiryWaitSpecify(uint32_t ms, uint32_t numTil, uint32_t &numCE,
         usleep(10);
     }
 
-    LOG_ERR("Timed out waiting %d ms for %d CE's in CQ %d, found %d",
-        ms, numTil, GetQId(), numCE);
-    struct nvme_gen_cq qMetrics = LogQMetrics();
-    LOG_NRM("qMetrics.head_ptr dump follows:");
-    LogCE(qMetrics.head_ptr);
-    LOG_NRM("qMetrics.tail_ptr dump follows:");
-    LogCE(qMetrics.tail_ptr);
-    LOG_NRM("qMetrics.head_ptr+1 dump follows:");
-    LogCE((qMetrics.head_ptr + 1) % qMetrics.elements);
-    LOG_NRM("qMetrics.tail_ptr+1 dump follows:");
-    LogCE((qMetrics.tail_ptr + 1) % qMetrics.elements);
     return false;
+}
+
+
+bool
+CQ::ReapInquiryWaitSpecify(uint32_t ms, uint32_t numTil, uint32_t &numCE,
+    uint32_t &isrCount)
+{
+    bool result = DoReapInquiry(ms, numTil, numCE, isrCount);
+
+    if (!result) {
+        LOG_ERR("Timed out waiting %d ms for %d CE's in CQ %d, found %d",
+            ms, numTil, GetQId(), numCE);
+        struct nvme_gen_cq qMetrics = LogQMetrics();
+        LOG_NRM("qMetrics.head_ptr dump follows:");
+        LogCE(qMetrics.head_ptr);
+        LOG_NRM("qMetrics.tail_ptr dump follows:");
+        LogCE(qMetrics.tail_ptr);
+        LOG_NRM("qMetrics.head_ptr+1 dump follows:");
+        LogCE((qMetrics.head_ptr + 1) % qMetrics.elements);
+        LOG_NRM("qMetrics.tail_ptr+1 dump follows:");
+        LogCE((qMetrics.tail_ptr + 1) % qMetrics.elements);
+    }
+
+    return result;
+}
+
+
+bool
+CQ::ReapInquiryWaitSpecifyQ(uint32_t ms, uint32_t numTil, uint32_t &numCE,
+    uint32_t &isrCount)
+{
+    return DoReapInquiry(ms, numTil, numCE, isrCount);
 }
 
 
@@ -358,7 +397,7 @@ CQ::CalcTimeout(uint32_t ms, struct timeval &initial, uint32_t &delta)
 
 uint32_t
 CQ::Reap(uint32_t &ceRemain, SharedMemBufferPtr memBuffer, uint32_t &isrCount,
-    uint32_t ceDesire, bool zeroMem)
+    uint32_t ceDesire, bool zeroMem, bool failOnIoctl)
 {
     int rc;
     struct nvme_reap reap;
@@ -387,8 +426,12 @@ CQ::Reap(uint32_t &ceRemain, SharedMemBufferPtr memBuffer, uint32_t &isrCount,
     reap.elements = ceDesire;
     reap.size = memBuffer->GetBufSize();
     reap.buffer = memBuffer->GetBuffer();
-    if ((rc = ioctl(mFd, NVME_IOCTL_REAP, &reap)) < 0)
-        throw FrmwkEx(HERE, "Error during reaping CE's, rc =%d", rc);
+    if ((rc = ioctl(mFd, NVME_IOCTL_REAP, &reap)) < 0) {
+        if (failOnIoctl)
+            throw FrmwkEx(HERE, "Error during reaping CE's, rc = %d", rc);
+        else
+            LOG_ERR("Error during reaping CE's, rc = %d", rc);
+    }
 
     isrCount = reap.isr_count;
     ceRemain = reap.num_remaining;

@@ -32,6 +32,7 @@ namespace GrpGeneralCmds {
 
 const uint8_t IllegalNVMCmds_r10b::WRITE_UNCORR_OPCODE  = 0x04;
 const uint8_t IllegalNVMCmds_r10b::COMPARE_OPCODE       = 0x05;
+const uint8_t IllegalNVMCmds_r10b::WRITE_ZEROES_OPCODE	= 0x08;
 const uint8_t IllegalNVMCmds_r10b::DSM_OPCODE           = 0x09;
 
 
@@ -136,8 +137,8 @@ IllegalNVMCmds_r10b::GetIllegalOpcodes()
     for (uint8_t opCode = 0x3; opCode < VENDOR_SPEC_OPC; opCode++)
         illegalOpCodes.push_back(opCode);
 
-    uint8_t optNVMCmds = (gInformative->GetIdentifyCmdCtrlr()->
-        GetValue(IDCTRLRCAP_ONCS) & 0x7);
+    uint8_t optNVMCmds = gInformative->GetIdentifyCmdCtrlr()->
+        GetValue(IDCTRLRCAP_ONCS);
 
     if ((optNVMCmds & ONCS_SUP_COMP_CMD) != 0)
         illegalOpCodes.remove(COMPARE_OPCODE);
@@ -147,6 +148,9 @@ IllegalNVMCmds_r10b::GetIllegalOpcodes()
 
     if ((optNVMCmds & ONCS_SUP_DSM_CMD) != 0)
         illegalOpCodes.remove(DSM_OPCODE);
+
+    if ((optNVMCmds & ONCS_SUP_WR_ZERO_CMD) != 0)
+        illegalOpCodes.remove(WRITE_ZEROES_OPCODE);
 
     return illegalOpCodes;
 }

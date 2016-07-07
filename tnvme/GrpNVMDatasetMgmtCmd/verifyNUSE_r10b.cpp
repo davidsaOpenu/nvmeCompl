@@ -117,7 +117,9 @@ VerifyNUSE_r10b::RunCoreTest()
     uint64_t ncap = namspcData.idCmdNamspc->GetValue(IDNAMESPC_NCAP);
     LBAFormat lbaFormat = namspcData.idCmdNamspc->GetLBAFormat();
     uint64_t lbaDataSize = namspcData.idCmdNamspc->GetLBADataSize();
-    LOG_NRM("For namespace ID #%d; NCAP = 0x%08lX", namspcData.id, ncap);
+    LOG_NRM("For namespace ID #%d; NCAP = 0x%08lX; LBA Size (B): %lu; NCAP*LBA "
+        "Size (GB): %.2f", namspcData.id, ncap, lbaDataSize,
+        ncap * lbaDataSize / 1e9);
 
     LOG_NRM("Create dataset mgmt cmd to be used subsequently");
     SharedDatasetMgmtPtr datasetMgmtCmd =
@@ -137,14 +139,15 @@ VerifyNUSE_r10b::RunCoreTest()
     rangePtr->slba = 0;
     rangePtr->length = ncap;
 
+    const double deallocRate = 1.6e8; // bytes / ms
     work = str(boost::format("deallocate.%08Xh") % ncap);
-    IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1), iosq, iocq,
-        datasetMgmtCmd, work, true);
+    IO::SendAndReapCmd(mGrpName, mTestName, ncap * lbaDataSize / deallocRate
+        + 10000, iosq, iocq, datasetMgmtCmd, work, true);
 
     LOG_NRM("Create identify cmd & assoc some buffer memory");
     SharedIdentifyPtr idCmdNamSpc = SharedIdentifyPtr(new Identify());
     LOG_NRM("Force identify to request namespace struct");
-    idCmdNamSpc->SetCNS(false);
+    idCmdNamSpc->SetCNS(CNS_Namespace);
     idCmdNamSpc->SetNSID(namspcData.id);
     SharedMemBufferPtr idMemNamSpc = SharedMemBufferPtr(new MemBuffer());
     idMemNamSpc->InitAlignment(Identify::IDEAL_DATA_SIZE, PRP_BUFFER_ALIGNMENT,
@@ -159,7 +162,8 @@ VerifyNUSE_r10b::RunCoreTest()
 
     LOG_NRM("Verify namespace utilization is zero after de-allocation.");
     uint64_t nuse = idCmdNamSpc->GetValue(IDNAMESPC_NUSE);
-    if (nuse != 0x0) {
+    uint64_t nsfeat = idCmdNamSpc->GetValue(IDNAMESPC_NSFEAT);
+    if (nuse != 0x0 && ((nsfeat & 0x1) == 0x1)) {
         throw FrmwkEx(HERE, "Expected namspc utilization = 0x0 but found "
             "namspc utilization = 0x%08X", nuse);
     }
@@ -207,7 +211,8 @@ VerifyNUSE_r10b::RunCoreTest()
 
     LOG_NRM("Verify namespace utilization is one after single LBA write cmd.");
     nuse = idCmdNamSpc->GetValue(IDNAMESPC_NUSE);
-    if (nuse != 0x1) {
+    nsfeat = idCmdNamSpc->GetValue(IDNAMESPC_NSFEAT);
+    if (nuse != 0x1  && ((nsfeat & 0x1) == 0x1)) {
         throw FrmwkEx(HERE, "Expected namspc utilization = 0x1 but found "
             "namspc utilization = 0x%08X", nuse);
     }

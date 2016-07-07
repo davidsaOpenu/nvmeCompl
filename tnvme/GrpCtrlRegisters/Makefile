@@ -19,6 +19,8 @@ INCLUDES = -I. -I../ -I../../ -I/usr/local/include
 SRC = \
 	grpCtrlRegisters.cpp		\
 	allCtrlRegs_r10b.cpp		\
+	allCtrlRegs_r11.cpp			\
+	allCtrlRegs_r12.cpp			\
 	ctrlrResetDefaults_r10b.cpp
 
 .SUFFIXES: .cpp
@@ -35,7 +37,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)

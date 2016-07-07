@@ -18,7 +18,9 @@ INCLUDES = -I. -I../ -I../../ -I/usr/local/include
 
 SRC =					\
 	grpAdminAsyncCmd.cpp		\
-        unsupportRrvdFields_r10b.cpp	\
+  unsupportRsvdFields_r10b.cpp	\
+  unsupportRsvdFields_r11b.cpp	\
+  unsupportRsvdFields_r12.cpp	\
 	abortByReset_r10b.cpp		\
 	verifyMaxEvents_r10b.cpp	\
 	verifyMasking_r10b.cpp		\
@@ -38,7 +40,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)

@@ -128,6 +128,25 @@ public:
     static bool ValidatePeek(union CE &ce, CEStat status = CESTAT_SUCCESS);
 
     /**
+     * Peeks at the status field of the CE, when the supplied unexpected status
+     * is what is contained with the supplied CE it will return false, otherwise
+     * it will return true.
+     * @note This method never throws
+     * @param ce Pass the CE to perform the interrogation against
+     * @param status Pass the unexpected state of the CE to verify with
+     * @return false upon match, otherwise true.
+     */
+    static bool InvalidatePeek(union CE &ce, CEStat status = CESTAT_SUCCESS);
+
+    /**
+     * Retrieves the CEStat of the CE.
+     * @note This method may throw
+     * @param ce Pass the CE to process
+     * @return the CEStat object for the ce's status
+     */
+    static CEStat GetCEStat(union CE ce);
+
+    /**
      * Indicate the status of the CE in the log file, i.e. stderr.
      * @note This method may throw
      */
@@ -140,6 +159,14 @@ public:
      * @param desc Returns an array of decoded strings
      */
     static void DecodeStatus(union CE &ce, vector<string> &desc);
+    
+    /**
+     * Print the status in the form:<br/>
+     * Status: SCT=0x[SCT], SC=0x[SC], Desc=[desc]
+     *
+     * @param status the status to print
+     */
+    static void PrintStatus(CEStat status);
 
 private:
     /// Contains details about every CE status field

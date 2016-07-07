@@ -17,7 +17,9 @@
 #include "grpGeneralCmds.h"
 #include "createResources_r10b.h"
 #include "illegalNVMCmds_r10b.h"
+#include "illegalNVMCmds_r11.h"
 #include "illegalAdminCmds_r10b.h"
+#include "illegalAdminCmds_r12.h"
 #include "cidAcceptedASQ_r10b.h"
 #include "cidAcceptedIOSQ_r10b.h"
 
@@ -35,6 +37,20 @@ GrpGeneralCmds::GrpGeneralCmds(size_t grpNum) :
         APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpGeneralCmds)
         APPEND_TEST_AT_YLEVEL(IllegalNVMCmds_r10b, GrpGeneralCmds)
         APPEND_TEST_AT_YLEVEL(IllegalAdminCmds_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(CIDAcceptedASQ_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_XLEVEL(CIDAcceptedIOSQ_r10b, GrpGeneralCmds)
+        break;
+    case SPECREV_11:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(IllegalNVMCmds_r11, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(IllegalAdminCmds_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(CIDAcceptedASQ_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_XLEVEL(CIDAcceptedIOSQ_r10b, GrpGeneralCmds)
+        break;
+    case SPECREV_12:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(IllegalNVMCmds_r11, GrpGeneralCmds)
+        APPEND_TEST_AT_YLEVEL(IllegalAdminCmds_r12, GrpGeneralCmds)
         APPEND_TEST_AT_YLEVEL(CIDAcceptedASQ_r10b, GrpGeneralCmds)
         APPEND_TEST_AT_XLEVEL(CIDAcceptedIOSQ_r10b, GrpGeneralCmds)
         break;

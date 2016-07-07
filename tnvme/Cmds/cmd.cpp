@@ -17,6 +17,8 @@
 #include "cmd.h"
 #include "../Utils/buffers.h"
 
+#include "../Queues/se.h"
+
 using namespace std;
 
 const uint8_t  Cmd::BITMASK_FUSE_B = 0x03;
@@ -81,36 +83,52 @@ Cmd::GetDword(uint8_t whichDW) const
 uint16_t
 Cmd::GetWord(uint8_t whichDW, uint8_t dwOffset) const
 {
-    if (whichDW >= GetCmdSizeDW())
-        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
-    else if (dwOffset > 1)
-        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
-
-    return (uint16_t)(GetDword(whichDW) >> (dwOffset * 16));
+    return GetBits(whichDW, dwOffset, 16);
+//    if (whichDW >= GetCmdSizeDW())
+//        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
+//    else if (dwOffset > 1)
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//
+//    return (uint16_t)(GetDword(whichDW) >> (dwOffset * 16));
 }
 
 
 uint8_t
 Cmd::GetByte(uint8_t whichDW, uint8_t dwOffset) const
 {
-    if (whichDW >= GetCmdSizeDW())
-        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
-    else if (dwOffset > 3)
-        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+    return GetBits(whichDW, dwOffset, 8);
+//    if (whichDW >= GetCmdSizeDW())
+//        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
+//    else if (dwOffset > 3)
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//
+//    return (uint8_t)(GetDword(whichDW) >> (dwOffset * 8));
+}
 
-    return (uint8_t)(GetDword(whichDW) >> (dwOffset * 8));
+
+uint8_t
+Cmd::GetNibble(uint8_t whichDW, uint8_t dwOffset) const
+{
+    return GetBits(whichDW, dwOffset, 4);
+//    if (whichDW >= GetCmdSizeDW())
+//        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
+//    else if (dwOffset > 7)
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//
+//    return (uint8_t)(GetDword(whichDW) >> (dwOffset * 4));
 }
 
 
 bool
 Cmd::GetBit(uint8_t whichDW, uint8_t dwOffset) const
 {
-    if (whichDW >= GetCmdSizeDW())
-        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
-    else if (dwOffset > 31)
-        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
-
-    return (GetDword(whichDW) & (0x00000001 << dwOffset));
+    return GetBits(whichDW, dwOffset, 1) == 1;
+//    if (whichDW >= GetCmdSizeDW())
+//        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
+//    else if (dwOffset > 31)
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//
+//    return (GetDword(whichDW) & (0x00000001 << dwOffset));
 }
 
 
@@ -128,52 +146,109 @@ Cmd::SetDword(uint32_t newVal, uint8_t whichDW)
 void
 Cmd::SetWord(uint16_t newVal, uint8_t whichDW, uint8_t dwOffset)
 {
-    if (whichDW >= GetCmdSizeDW()) {
-        throw FrmwkEx(HERE, 
-            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
-            GetCmdSizeDW(), whichDW);
-    } else if (dwOffset > 1) {
-        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
-    }
-    uint32_t dw = GetDword(whichDW);
-    dw &= ~(0x0000ffff << (dwOffset * 16));
-    dw |= ((uint32_t)newVal << (dwOffset * 16));
-    SetDword(dw, whichDW);
+    SetBits(newVal, whichDW, dwOffset, 16);
+//    if (whichDW >= GetCmdSizeDW()) {
+//        throw FrmwkEx(HERE,
+//            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
+//            GetCmdSizeDW(), whichDW);
+//    } else if (dwOffset > 1) {
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//    }
+//    uint32_t dw = GetDword(whichDW);
+//    dw &= ~(0x0000ffff << (dwOffset * 16));
+//    dw |= ((uint32_t)newVal << (dwOffset * 16));
+//    SetDword(dw, whichDW);
 }
 
 
 void
 Cmd::SetByte(uint8_t newVal, uint8_t whichDW, uint8_t dwOffset)
 {
-    if (whichDW >= GetCmdSizeDW()) {
-        throw FrmwkEx(HERE, 
-            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
-            GetCmdSizeDW(), whichDW);
-    } else if (dwOffset > 3) {
-        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
-    }
-    uint32_t dw = GetDword(whichDW);
-    dw &= ~(0x000000ff << (dwOffset * 8));
-    dw |= ((uint32_t)newVal << (dwOffset * 8));
-    SetDword(dw, whichDW);
+    SetBits(newVal, whichDW, dwOffset, 8);
+//    if (whichDW >= GetCmdSizeDW()) {
+//        throw FrmwkEx(HERE,
+//            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
+//            GetCmdSizeDW(), whichDW);
+//    } else if (dwOffset > 3) {
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//    }
+//    uint32_t dw = GetDword(whichDW);
+//    dw &= ~(0x000000ff << (dwOffset * 8));
+//    dw |= ((uint32_t)newVal << (dwOffset * 8));
+//    SetDword(dw, whichDW);
+}
+
+
+void
+Cmd::SetNibble(uint8_t newVal, uint8_t whichDW, uint8_t dwOffset)
+{
+    SetBits(newVal, whichDW, dwOffset, 4);
+//    if (whichDW >= GetCmdSizeDW()) {
+//        throw FrmwkEx(HERE,
+//            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
+//            GetCmdSizeDW(), whichDW);
+//    } else if (dwOffset > 7) {
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//    }
+//    uint32_t dw = GetDword(whichDW);
+//    dw &= ~(0x0000000f << (dwOffset * 4));
+//    dw |= ((uint32_t)(newVal & 0x0f) << (dwOffset * 4));
+//    SetDword(dw, whichDW);
 }
 
 
 void
 Cmd::SetBit(bool newVal, uint8_t whichDW, uint8_t dwOffset)
 {
+    SetBits(newVal ? 1 : 0, whichDW, dwOffset, 1);
+//    if (whichDW >= GetCmdSizeDW()) {
+//        throw FrmwkEx(HERE,
+//            "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
+//            GetCmdSizeDW(), whichDW);
+//    } else if (dwOffset > 31) {
+//        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+//    }
+//    uint32_t dw = GetDword(whichDW);
+//    dw &= ~(0x00000001 << dwOffset);
+//    if (newVal)
+//        dw |= (0x00000001 << dwOffset);
+//    SetDword(dw, whichDW);
+}
+
+
+void
+Cmd::SetBits(uint32_t newVal, uint8_t whichDW, uint8_t dwOffset,
+    uint16_t numBits)
+{
     if (whichDW >= GetCmdSizeDW()) {
         throw FrmwkEx(HERE,
             "Cmd is not large enough (%d DWORDS) to set req'd DWORD %d",
             GetCmdSizeDW(), whichDW);
-    } else if (dwOffset > 31) {
+    } else if (dwOffset > ((32 / numBits) - 1)) {
         throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
     }
     uint32_t dw = GetDword(whichDW);
-    dw &= ~(0x00000001 << dwOffset);
-    if (newVal)
-        dw |= (0x00000001 << dwOffset);
+    uint32_t mask = 0;
+    for (uint16_t i = 0; i < numBits; i++)
+        mask |= (0x1 << i);
+    dw &= ~(mask << (dwOffset * numBits));
+    dw |= ((uint32_t)(newVal & mask) << (dwOffset * numBits));
     SetDword(dw, whichDW);
+}
+
+
+uint64_t
+Cmd::GetBits(uint8_t whichDW, uint8_t dwOffset, uint16_t numBits) const
+{
+    if (whichDW >= GetCmdSizeDW())
+        throw FrmwkEx(HERE, "Cmd is not large enough to get requested value");
+    else if (dwOffset > ((32 / numBits) - 1))
+        throw FrmwkEx(HERE, "Illegal DW offset parameter passed: %d", dwOffset);
+
+    uint32_t mask = 0;
+    for (uint16_t i = 0; i < numBits; i++)
+        mask |= (0x1 << i);
+    return (uint8_t)((GetDword(whichDW) & mask) >> (dwOffset * numBits));
 }
 
 
@@ -252,4 +327,26 @@ Cmd::Dump(DumpFilename filename, string fileHdr) const
         mCmdBuf->GetBufSize(), "Cmd contents:");
     PrpData::Dump(filename, "Payload contents:");
     MetaData::Dump(filename, "Meta data contents:");
+}
+
+void
+Cmd::Print()
+{
+	union SE *se = (union SE *) mCmdBuf->GetBuffer();
+	LOG_NRM("SE DW0:  0x%08X Opcode: 0x%04x Fuse: 0x%01x CID: 0x%02x", se->d.dw0, se->n.OPC, se->n.FUSE, se->n.CID); // Opcode, Fused, CID
+	LOG_NRM("SE DW1:  0x%08X NSID", se->d.dw1); // NSID
+	LOG_NRM("SE DW2:  0x%08X RSVD", se->d.dw2); // RSVD
+	LOG_NRM("SE DW3:  0x%08X RSVD", se->d.dw3); // RSVD
+	LOG_NRM("SE DW4:  0x%08X MetaA", se->d.dw4); // Metadata Pointer A
+	LOG_NRM("SE DW5:  0x%08X MetaB", se->d.dw5); // Metadata Pointer B
+	LOG_NRM("SE DW6:  0x%08X PRP1A", se->d.dw6); // PRP1A
+	LOG_NRM("SE DW7:  0x%08X PRP1B", se->d.dw7); // PRP1B
+	LOG_NRM("SE DW8:  0x%08X PRP2A", se->d.dw8); // PRP2A
+	LOG_NRM("SE DW9:  0x%08X PRP2B", se->d.dw9); // PRP2B
+	LOG_NRM("SE DW10: 0x%08X CmdSpc", se->d.dw10);// Admin CmdSpecific / NVME Num Dwords in PRP
+	LOG_NRM("SE DW11: 0x%08X CmdSpc", se->d.dw11);// Admin CmdSpecific / NVME Num Dwords in Meta
+	LOG_NRM("SE DW12: 0x%08X CmdSpc", se->d.dw12);// CmdSpecific
+	LOG_NRM("SE DW13: 0x%08X CmdSpc", se->d.dw13);// CmdSpecific
+	LOG_NRM("SE DW14: 0x%08X CmdSpc", se->d.dw14);// CmdSpecific
+	LOG_NRM("SE DW15: 0x%08X CmdSpc", se->d.dw15);// CmdSpecific
 }

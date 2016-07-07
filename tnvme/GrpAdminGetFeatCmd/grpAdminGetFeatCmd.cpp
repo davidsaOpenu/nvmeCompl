@@ -17,7 +17,11 @@
 #include "grpAdminGetFeatCmd.h"
 #include "createResources_r10b.h"
 #include "invalidFieldInCmd_r10b.h"
-#include "unsupportRrvdFields_r10b.h"
+#include "invalidFieldInCmd_r11.h"
+#include "invalidFieldInCmd_r12.h"
+#include "unsupportRsvdFields_r10b.h"
+#include "unsupportRsvdFields_r11b.h"
+#include "unsupportRsvdFields_r12.h"
 
 
 namespace GrpAdminGetFeatCmd {
@@ -34,7 +38,17 @@ GrpAdminGetFeatCmd::GrpAdminGetFeatCmd(size_t grpNum) :
     case SPECREV_10b:
         APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetFeatCmd)
         APPEND_TEST_AT_YLEVEL(InvalidFieldInCmd_r10b, GrpAdminGetFeatCmd)
-        APPEND_TEST_AT_YLEVEL(UnsupportRrvdFields_r10b, GrpAdminGetFeatCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r10b, GrpAdminGetFeatCmd)
+        break;
+    case SPECREV_11:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetFeatCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidFieldInCmd_r11, GrpAdminGetFeatCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r11b, GrpAdminGetFeatCmd)
+        break;
+    case SPECREV_12:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetFeatCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidFieldInCmd_r12, GrpAdminGetFeatCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r12, GrpAdminGetFeatCmd)
         break;
 
     default:

@@ -111,7 +111,7 @@ AllPciRegs_r10b::ValidateDefaultValues()
 
     // Traverse the PCI header registers
     for (int j = 0; j < PCISPC_FENCE; j++) {
-        if (pciMetrics[j].specRev != mSpecRev)
+        if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev, mSpecRev))
             continue;
 
         // PCI hdr registers don't have an assoc capability
@@ -122,7 +122,7 @@ AllPciRegs_r10b::ValidateDefaultValues()
     for (size_t i = 0; i < pciCap->size(); i++) {
         // Read all registers assoc with the discovered capability
         for (int j = 0; j < PCISPC_FENCE; j++) {
-            if (pciMetrics[j].specRev != SPECREV_10b)
+            if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev, mSpecRev))
                 continue;
             else if (pciCap->at(i) == pciMetrics[j].cap)
                 result &= ValidatePciCapRegisterROAttribute((PciSpc)j);
@@ -146,7 +146,7 @@ AllPciRegs_r10b::ValidateROBitsAfterWriting()
 
     // Traverse the PCI header registers
     for (int j = 0; j < PCISPC_FENCE; j++) {
-        if (pciMetrics[j].specRev != mSpecRev)
+        if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev, mSpecRev))
             continue;
 
         // Reserved areas at NOT suppose to be written
@@ -175,7 +175,7 @@ AllPciRegs_r10b::ValidateROBitsAfterWriting()
     for (size_t i = 0; i < pciCap->size(); i++) {
         // Read all registers assoc with the discovered capability
         for (int j = 0; j < PCISPC_FENCE; j++) {
-            if (pciMetrics[j].specRev != mSpecRev)
+            if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev, mSpecRev))
                 continue;
 
             // Reserved areas at NOT suppose to be written
@@ -272,7 +272,7 @@ AllPciRegs_r10b::ValidateROBitsAfterWriting()
 bool
 AllPciRegs_r10b::ValidatePciCapRegisterROAttribute(PciSpc reg)
 {
-    uint64_t value;
+    uint64_t value = 0;
     uint64_t expectedValue;
     const PciSpcType *pciMetrics = gRegisters->GetPciMetrics();
     bool result = true;
@@ -308,17 +308,33 @@ AllPciRegs_r10b::ValidatePciCapRegisterROAttribute(PciSpc reg)
     } else if (gRegisters->Read(reg, value) == false) {
         throw FrmwkEx(HERE);
     } else {
-        // Ignore the implementation specific bits, and bits that
-        // the manufacturer can make a decision as to their type of
-        // access RW,RO
-        value &= ~pciMetrics[reg].impSpec;
+        // If ASPMS is supported via bits 10 and 11, bit 22 (ASPM) would be set
+        // by the firmware
+        if ((reg == PCISPC_PXLCAP) && (value & PXLCAP_ASPMS)) {
+            // Ignore the implementation specific bits (except the AOC bit),
+            // and bits that the manufacturer can make a decision as to their
+            // type of access RW,RO
+            value &= ~pciMetrics[reg].impSpec | PXLCAP_AOC;
 
-        // Verify that the RO bits are set to correct default
-        // values, no reset needed to achieve this because there's
-        // no way to change.
-        value &= pciMetrics[reg].maskRO;
-        expectedValue = (pciMetrics[reg].dfltValue &
-            pciMetrics[reg].maskRO);
+            // Verify that the RO bits are set to correct default
+            // values, no reset needed to achieve this because there's
+            // no way to change.
+            value &= pciMetrics[reg].maskRO;
+            expectedValue = (pciMetrics[reg].dfltValue | PXLCAP_ASPM_DEFAULT)
+                & pciMetrics[reg].maskRO;
+        } else  {
+			// Ignore the implementation specific bits, and bits that
+			// the manufacturer can make a decision as to their type of
+			// access RW,RO
+			value &= ~pciMetrics[reg].impSpec;
+
+			// Verify that the RO bits are set to correct default
+			// values, no reset needed to achieve this because there's
+			// no way to change.
+			value &= pciMetrics[reg].maskRO;
+			expectedValue = (pciMetrics[reg].dfltValue &
+				pciMetrics[reg].maskRO);
+		}
 
         if (value != expectedValue) {
             LOG_ERR("%s RO bit #%d has incorrect value", pciMetrics[reg].desc,
@@ -340,7 +356,6 @@ AllPciRegs_r10b::ValidatePciHdrRegisterROAttribute(PciSpc reg)
 
     if (pciMetrics[reg].size > MAX_SUPPORTED_REG_SIZE) {
         for (int k = 0; (k*sizeof(value)) < pciMetrics[reg].size; k++) {
-
             if (gRegisters->Read(NVMEIO_PCI_HDR, sizeof(value),
                 pciMetrics[reg].offset + (k * sizeof(value)),
                 (uint8_t *)&value, true) == false) {

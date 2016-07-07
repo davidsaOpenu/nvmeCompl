@@ -23,7 +23,7 @@
 #include "../Utils/kernelAPI.h"
 #include "../Utils/irq.h"
 #include "../Utils/io.h"
-#include "../Cmds/baseFeatures.h"
+#include "../Cmds/featureDefs.h"
 #include "../Cmds/getFeatures.h"
 #include "../Cmds/setFeatures.h"
 
@@ -63,6 +63,8 @@ FIDIRQVec_r10b(const FIDIRQVec_r10b &other) : Test(other)
     // All pointers in this object must be NULL, never allow shallow or deep
     // copies, see Test::Clone() header comment.
     ///////////////////////////////////////////////////////////////////////////
+    setFeaturesCmd = other.setFeaturesCmd;
+    getFeaturesCmd = other.getFeaturesCmd;
 }
 
 
@@ -74,6 +76,8 @@ FIDIRQVec_r10b::operator=(const FIDIRQVec_r10b &other)
     // copies, see Test::Clone() header comment.
     ///////////////////////////////////////////////////////////////////////////
     Test::operator=(other);
+    setFeaturesCmd = other.setFeaturesCmd;
+    getFeaturesCmd = other.getFeaturesCmd;
     return *this;
 }
 
@@ -99,10 +103,6 @@ FIDIRQVec_r10b::RunCoreTest()
      * None.
      * \endverbatim
      */
-    string work;
-    union CE ce;
-    struct nvme_gen_cq acqMetrics;
-
     if (gCtrlrConfig->SetState(ST_DISABLE_COMPLETELY) == false)
         throw FrmwkEx(HERE);
 
@@ -121,54 +121,66 @@ FIDIRQVec_r10b::RunCoreTest()
         throw FrmwkEx(HERE);
 
     LOG_NRM("Create Get features and set features cmds");
-    SharedGetFeaturesPtr getFeaturesCmd =
-        SharedGetFeaturesPtr(new GetFeatures());
-    SharedSetFeaturesPtr setFeaturesCmd =
-        SharedSetFeaturesPtr(new SetFeatures());
+    getFeaturesCmd = SharedGetFeaturesPtr(new GetFeatures());
+    setFeaturesCmd = SharedSetFeaturesPtr(new SetFeatures());
 
     LOG_NRM("Set and Get features for IRQ vec config (FID = 0x%x)",
-        BaseFeatures::FID_IRQ_VEC_CONFIG);
-    getFeaturesCmd->SetFID(BaseFeatures::FID_IRQ_VEC_CONFIG);
-    setFeaturesCmd->SetFID(BaseFeatures::FID_IRQ_VEC_CONFIG);
+            FID[FID_IRQ_VEC_CONFIG]);
+    getFeaturesCmd->SetFID(FID[FID_IRQ_VEC_CONFIG]);
+    setFeaturesCmd->SetFID(FID[FID_IRQ_VEC_CONFIG]);
 
     uint16_t max_ivec = IRQ::GetMaxIRQsSupportedAnyScheme();
 
     uint8_t ivecMismatch = 0;
     for (uint8_t cd = 0; cd < 2; cd++) {
-         for (uint16_t ivec = 1; ivec < max_ivec; ivec++) {
+        for (uint16_t ivec = 1; ivec < max_ivec; ivec++) {
             LOG_NRM("Set and Get features for IVECCONF # %d", ivec);
-
-            LOG_NRM("Issue set features cmd with CD = %d", cd);
-            LOG_NRM("Issue set features cmd with IVEC = %d", ivec);
-
-            setFeaturesCmd->SetIntVecConfig(cd, ivec);
-            work = str(boost::format("cdivec.%d") % ivec);
-            IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1),
-                asq, acq, setFeaturesCmd, work, true);
-
-            getFeaturesCmd->SetIntVecConfigIV(ivec);
-            acqMetrics = acq->GetQMetrics();
-            LOG_NRM("Issue get features & check (cd, ivec)=(%d, %d)", cd, ivec);
-            IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1),
-                asq, acq, getFeaturesCmd, work, false);
-
-            ce = acq->PeekCE(acqMetrics.head_ptr);
-            LOG_NRM("IRQ Vector Conf using Get Features = %d", ce.t.dw0);
-            if (ivec != (uint16_t)ce.t.dw0) {
-                LOG_ERR("IRQ Vector Conf get feat does not match set feat"
-                    "(expected, rcvd) = (%d, %d)", ivec, ce.t.dw0);
-                ivecMismatch = 0xFF;
-            }
-            if (cd != ((ce.t.dw0 >> 16) & 0x1)) {
-                LOG_ERR("Coalesing disable get feat does not match set feat"
-                    "(expected, rcvd) = (%d, %d)", cd, (ce.t.dw0 >> 16) & 0x1);
-                ivecMismatch = 0xFF;
-            }
+            ivecMismatch = sendFeatures(asq, acq, cd, ivec);
         }
     }
 
     if (ivecMismatch)
         throw FrmwkEx(HERE, "IRQ Vector Conf setting mismatched.");
+}
+
+
+bool
+FIDIRQVec_r10b::sendFeatures(SharedASQPtr asq, SharedACQPtr acq, uint8_t cd,
+    uint16_t ivec)
+{
+    string work;
+    struct nvme_gen_cq acqMetrics;
+    union CE ce;
+    bool ivecMismatch = false;
+
+    LOG_NRM("Issue set features cmd with CD = %d", cd);
+    LOG_NRM("Issue set features cmd with IVEC = %d", ivec);
+
+    setFeaturesCmd->SetIntVecConfig(cd, ivec);
+    work = str(boost::format("cdivec.%d") % ivec);
+    IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1),
+        asq, acq, setFeaturesCmd, work, true);
+
+    getFeaturesCmd->SetIntVecConfigIV(ivec);
+    acqMetrics = acq->GetQMetrics();
+    LOG_NRM("Issue get features & check (cd, ivec)=(%d, %d)", cd, ivec);
+    IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1),
+        asq, acq, getFeaturesCmd, work, false);
+
+    ce = acq->PeekCE(acqMetrics.head_ptr);
+    LOG_NRM("IRQ Vector Conf using Get Features = %d", ce.t.dw0);
+    if (ivec != (uint16_t)ce.t.dw0) {
+        LOG_ERR("IRQ Vector Conf get feat does not match set feat"
+            "(expected, rcvd) = (%d, %d)", ivec, ce.t.dw0);
+        ivecMismatch = true;
+    }
+    if (cd != ((ce.t.dw0 >> 16) & 0x1)) {
+        LOG_ERR("Coalescing disable get feat does not match set feat"
+            "(expected, rcvd) = (%d, %d)", cd, (ce.t.dw0 >> 16) & 0x1);
+        ivecMismatch = true;
+    }
+
+    return ivecMismatch;
 }
 
 

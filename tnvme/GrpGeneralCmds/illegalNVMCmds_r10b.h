@@ -30,7 +30,7 @@ namespace GrpGeneralCmds {
  * 1) See notes in the header file of the Test base class
  * \endverbatim
  */
-class IllegalNVMCmds_r10b : public Test
+class IllegalNVMCmds_r10b : virtual public Test
 {
 public:
     IllegalNVMCmds_r10b(string grpName, string testName);
@@ -50,10 +50,11 @@ protected:
     virtual RunType RunnableCoreTest(bool preserve);
 
     /// To allow future revisions of this test to override this functionality
-    list<uint8_t> GetIllegalOpcodes();
+    virtual list<uint8_t> GetIllegalOpcodes();
     static const uint8_t WRITE_UNCORR_OPCODE;
     static const uint8_t COMPARE_OPCODE;
     static const uint8_t DSM_OPCODE;
+    static const uint8_t WRITE_ZEROES_OPCODE;
 
 private:
     ///////////////////////////////////////////////////////////////////////////

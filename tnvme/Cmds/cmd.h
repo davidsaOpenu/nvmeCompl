@@ -28,7 +28,7 @@ class SQ;     // forward definition
 class Cmd;    // forward definition
 typedef boost::shared_ptr<Cmd>              SharedCmdPtr;
 #define CAST_TO_Cmd(shared_trackable_ptr)   \
-        boost::shared_polymorphic_downcast<Cmd>(shared_trackable_ptr);
+        boost::dynamic_pointer_cast<Cmd>(shared_trackable_ptr);
 
 
 /**
@@ -111,6 +111,14 @@ public:
     uint8_t GetByte(uint8_t whichDW, uint8_t dwOffset) const;
 
     /**
+     * @param newVal Pass the new DWORD value to set in the cmd buffer
+     * @param whichDW Pass [0->(GetCmdSizeDW()-1)] which DWORD to set
+     * @param dwOffset Pass [0->7] for which byte offset within the DW to set
+     */
+    void SetNibble(uint8_t newVal, uint8_t whichDW, uint8_t dwOffset);
+    uint8_t GetNibble(uint8_t whichDW, uint8_t dwOffset) const;
+
+    /**
      * @param newVal Pass true to set, false to reset in the cmd buffer
      * @param whichDW Pass [0->(GetCmdSizeDW()-1)] which DWORD to set
      * @param dwOffset Pass [0->31] for which bit offset within the DW to set
@@ -125,7 +133,7 @@ public:
      * @param fileHdr Pass a custom file header description to dump
      */
     virtual void Dump(DumpFilename filename, string fileHdr) const;
-
+    void Print();
 
 protected:
     /**
@@ -150,6 +158,10 @@ private:
     // Allows setting the dnvme assigned CID to the cmd after it has been SQ->Send()
     friend class SQ;
     void SetCID(uint16_t cid);
+
+    void SetBits(uint32_t newVal, uint8_t whichDW, uint8_t dwOffset,
+        uint16_t numBits);
+    uint64_t GetBits(uint8_t whichDW, uint8_t dwOffset, uint16_t numBits) const;
 };
 
 

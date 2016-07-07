@@ -18,6 +18,7 @@
 #include "globals.h"
 #include "../Exception/frmwkEx.h"
 #include "../Cmds/getFeatures.h"
+#include "../Cmds/featureDefs.h"
 #include "../Utils/kernelAPI.h"
 #include "../Utils/io.h"
 
@@ -336,7 +337,7 @@ Informative::Get1stBareMetaE2E() const
 {
     vector<uint32_t> namspc;
 
-    namspc= GetBareNamespaces();
+    namspc = GetBareNamespaces();
     if (namspc.size())
         return (Namspc(GetIdentifyCmdNamspc(namspc[0]), namspc[0], NS_BARE));
 
@@ -483,7 +484,7 @@ Informative::SendGetFeaturesNumOfQueues(SharedASQPtr asq, SharedACQPtr acq,
     LOG_NRM("Create get features");
     SharedGetFeaturesPtr gfNumQ = SharedGetFeaturesPtr(new GetFeatures());
     LOG_NRM("Force get features to request number of queues");
-    gfNumQ->SetFID(GetFeatures::FID_NUM_QUEUES);
+    gfNumQ->SetFID(FID[FID_NUM_QUEUES]);
     gfNumQ->Dump(
         FileSystem::PrepDumpFile(GRP_NAME, TEST_NAME, "GetFeat", "NumOfQueue"),
         "The get features number of queues cmd");
@@ -558,7 +559,7 @@ Informative::SendIdentifyCtrlrStruct(SharedASQPtr asq, SharedACQPtr acq,
     LOG_NRM("Create 1st identify cmd and assoc some buffer memory");
     SharedIdentifyPtr idCmdCtrlr = SharedIdentifyPtr(new Identify());
     LOG_NRM("Force identify to request ctrlr capabilities struct");
-    idCmdCtrlr->SetCNS(true);
+    idCmdCtrlr->SetCNS(CNS_Controller);
     SharedMemBufferPtr idMemCap = SharedMemBufferPtr(new MemBuffer());
     idMemCap->InitAlignment(Identify::IDEAL_DATA_SIZE, PRP_BUFFER_ALIGNMENT,
         true, 0);
@@ -599,7 +600,7 @@ Informative::SendIdentifyNamespaceStruct(SharedASQPtr asq, SharedACQPtr acq,
         SharedIdentifyPtr idCmdNamSpc = SharedIdentifyPtr(new Identify());
         LOG_NRM("Force identify to request namespace struct #%llu",
             (long long unsigned int)namSpc);
-        idCmdNamSpc->SetCNS(false);
+        idCmdNamSpc->SetCNS(CNS_Namespace);
         idCmdNamSpc->SetNSID(namSpc);
         SharedMemBufferPtr idMemNamSpc = SharedMemBufferPtr(new MemBuffer());
         idMemNamSpc->InitAlignment(Identify::IDEAL_DATA_SIZE,

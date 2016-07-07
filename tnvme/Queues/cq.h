@@ -23,7 +23,7 @@
 class CQ;    // forward definition
 typedef boost::shared_ptr<CQ>               SharedCQPtr;
 #define CAST_TO_CQ(shared_trackable_ptr)    \
-        boost::shared_polymorphic_downcast<CQ>(shared_trackable_ptr);
+        boost::dynamic_pointer_cast<CQ>(shared_trackable_ptr);
 
 
 /**
@@ -73,6 +73,16 @@ public:
      * @return The CE requested.
      */
     union CE PeekCE(uint16_t indexPtr);
+	
+    /**
+     * Peek at a Completion Element (CE) in CQ position indicated by its CID.
+     * Only dnvme can reap CE's from a CQ by calling Reap(), however user space
+     * does have eyes into that CQ's memory, and thus allows peeking at any CE
+     * at any time without reaping anything.
+     * @param indexPtr Pass [0 to (GetNumEntries()-1)] as the index into the CQ.
+     * @return The CE requested.
+     */	
+    union CE PeekCEwithCID(uint16_t CIDtoPeek);
 
     /**
      * Log the entire contents of CE at CQ position indicated by indexPtr to
@@ -140,6 +150,20 @@ public:
         uint32_t &isrCount);
 
     /**
+     * Wait until at least the specified number of CE's become available or
+     * until a time out period expires. Quietly returns result (no output).
+     * @param ms Pass the max number of ms to wait until numTil CE's arrive.
+     * @param numTil Pass the number of CE's that need to become available
+     * @param numCE Returns the number of unreap'd CE's awaiting
+     * @param isrCount Returns the number of ISR's which fired and were counted
+     *        that are assoc with this CQ. If this CQ does not use IRQ's, then
+     *        this value will remain 0.
+     * @return true when CE's are awaiting to be reaped, otherwise a timeout
+     */
+    bool ReapInquiryWaitSpecifyQ(uint32_t ms, uint32_t numTil, uint32_t &numCE,
+        uint32_t &isrCount);
+
+    /**
      * Reap a specified number of Completion Elements (CE) from this CQ. The
      * memBuffer will be resized. Calling this method when (ReapInquiry() == 0)
      * is fine.
@@ -154,10 +178,13 @@ public:
      *      reap all which can be reaped.
      * @param zeroMem Pass true to zero out memBuffer before reaping, otherwise
      *      the buffer is not modified.
+     * @param failOnIoctl Pass true to fail if ioctl returns an error, otherwise
+     *      an error is logged and no exception is thrown
      * @return Returns the actual number of CE's reaped
      */
     uint32_t Reap(uint32_t &ceRemain, SharedMemBufferPtr memBuffer,
-        uint32_t &isrCount, uint32_t ceDesire = 0, bool zeroMem = false);
+        uint32_t &isrCount, uint32_t ceDesire = 0, bool zeroMem = false,
+        bool failOnIoctl = true);
 
 
 protected:
@@ -208,6 +235,12 @@ private:
      * @return true if the TO has expired, false otherwise
      */
     bool CalcTimeout(uint32_t ms, struct timeval &initial, uint32_t &delta);
+
+    /**
+     * Do the actual reaping for ReapInquiryWaitSpecify
+     */
+    bool DoReapInquiry(uint32_t ms, uint32_t numTil, uint32_t &numCE,
+        uint32_t &isrCount);
 };
 
 

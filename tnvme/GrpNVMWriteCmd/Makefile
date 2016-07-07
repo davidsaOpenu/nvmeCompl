@@ -20,15 +20,23 @@ SRC =						\
 	grpNVMWriteCmd.cpp			\
 	createResources_r10b.cpp		\
 	lbaOutOfRangeBare_r10b.cpp		\
+	lbaOutOfRangeBare_r12.cpp		\
 	invalidNamspc_r10b.cpp			\
 	unsupportRsvdFields_r10b.cpp		\
+	unsupportRsvdFields_r11b.cpp		\
+	unsupportRsvdFields_r12.cpp		\
 	ignoreMetaPtrBare_r10b.cpp		\
+	ignoreMetaPtrBare_r12.cpp		\
 	protInfoIgnoreBare_r10b.cpp		\
+	protInfoIgnoreBare_r12.cpp		\
 	FUA_r10b.cpp				\
 	limitedRetry_r10b.cpp			\
 	lbaOutOfRangeMeta_r10b.cpp		\
+	lbaOutOfRangeMeta_r12.cpp		\
 	ignoreMetaPtrMeta_r10b.cpp		\
-	protInfoIgnoreMeta_r10b.cpp
+	ignoreMetaPtrMeta_r12.cpp		\
+	protInfoIgnoreMeta_r10b.cpp	\
+	protInfoIgnoreMeta_r12.cpp
 
 .SUFFIXES: .cpp
 
@@ -44,7 +52,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)
