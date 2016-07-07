@@ -1,0 +1,16 @@
+src/
+rpm/
+Debug/
+rpmbuild/
+Logs/
+tnvme-*/
+
+tnvme
+.cproject
+.project
+*.a
+*.o
+doxygen.log
+dump.reg.pci
+dump.reg.ctrl
+tnvme-*.tar.gz
