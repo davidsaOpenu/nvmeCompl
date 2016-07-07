@@ -41,6 +41,7 @@ InvalidNamspc_r10b::InvalidNamspc_r10b
         "GetLogPage to all namspcs not supported by DUT and expect failure, "
         "0xFFFFFFFF is legal and return global page. If SMART "
         "is not supported then all NSID values are legal, verify success.");
+    // Where does it say that the last sentence is true in the spec?
 }
 
 
@@ -121,24 +122,34 @@ InvalidNamspc_r10b::RunCoreTest()
         throw FrmwkEx(HERE, "Required to support >= 1 namespace");
 
     uint8_t logPageAttr = (uint8_t)idCtrlrStruct->GetValue(IDCTRLRCAP_LPA);
+    // bits 7:1 are reserved, need bit 0
+    uint8_t suppSmartPerNamspc = logPageAttr & 0x1;
+
+    if(suppSmartPerNamspc > 0)
+    	LOG_NRM("IDCTRLRCAP_LPA bit0 is set. Per Namespace Smart Pages supported");
+    else
+    	LOG_NRM("IDCTRLRCAP_LPA bit0 is not set. Per Namespace Smart Pages is not supported");
 
     // for all illegal nsid's verify get log page cmd.
     for (i = (nn + 1), inc = 1; i < 0xffffffff; i += (2 * inc), inc += 1327) {
-        LOG_NRM("Issue Get log page cmd with illegal namspc ID = %llu",
+        LOG_NRM("Issue Get log page cmd with illegal namspc ID = 0x%llX",
             (unsigned long long)i);
         getLogPgCmd->SetNSID(i);
 
         work = str(boost::format("namspc%d") % i);
         // Determine the status based on the per namespace mask bit.
+        // While the 1.1+ spec requires the device to return invalid field
+        //   the 1.0 spec does NOT require the device to return SUCCESS and
+        //   a global log page no matter what value of NSID is provided
+        // Instead only the global 0xFFFFFFFF NSID MUST be supported
         IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1), asq, acq,
-            getLogPgCmd, work, true, logPageAttr ? CESTAT_INVAL_NAMSPC :
-            CESTAT_SUCCESS);
+            getLogPgCmd, work, true, CESTAT_INVAL_NAMSPC);
     }
 
     // If per namespc smart log is supported, check all legal nn.
-    if (logPageAttr) {
+    if (suppSmartPerNamspc) {
         for (i = 1; i <= nn; i++) {
-            LOG_NRM("Issue Get log page cmd with legal namspc ID = %llu",
+            LOG_NRM("Issue Get log page cmd with legal namspc ID = 0x%llX (per namespace smart log supported)",
                 (unsigned long long)i);
             getLogPgCmd->SetNSID(i);
 
@@ -147,13 +158,20 @@ InvalidNamspc_r10b::RunCoreTest()
             IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1),
                 asq, acq, getLogPgCmd, work, true);
         }
-    } else {
+    }
+
+	// GetLogPage of NSID == 0 is not expected to pass when LPA bit 0 is not set
+	// The only requirement is that 0xFFFFFFFF is supported, not that the NSID field
+	//   is completely ignored and a global page is always returned...
+    /*
+    else {
         i = 0;
         getLogPgCmd->SetNSID(i);
         work = str(boost::format("namspc%d") % i);
         IO::SendAndReapCmd(mGrpName, mTestName, CALC_TIMEOUT_ms(1), asq, acq,
             getLogPgCmd, work, true);
     }
+    */
 
     // If name space is 0xffffffff, then we should get the global log info.
     i = 0xffffffff;

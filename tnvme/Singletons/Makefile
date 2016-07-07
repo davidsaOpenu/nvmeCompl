@@ -19,10 +19,11 @@ INCLUDES = -I. -I../ -I../../ -I/usr/local/include
 SRC = \
 	registers.cpp		\
 	memBuffer.cpp		\
-	objRsrc.cpp		\
+	objRsrc.cpp			\
 	metaRsrc.cpp		\
 	rsrcMngr.cpp		\
-	ctrlrConfig.cpp		\
+	ctrlrCap.cpp     \
+	ctrlrConfig.cpp	\
 	informative.cpp
 
 .SUFFIXES: .cpp
@@ -39,7 +40,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)

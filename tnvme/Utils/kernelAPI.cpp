@@ -82,7 +82,7 @@ KernelAPI::DumpCtrlrSpaceRegs(DumpFilename filename, bool verbose)
     string work;
     uint64_t value = 0;
     string outFile;
-    const CtlSpcType *pciMetrics = gRegisters->GetCtlMetrics();
+    const CtlSpcType *ctlMetrics = gRegisters->GetCtlMetrics();
 
 
     LOG_NRM("Dump ctrlr regs to filename: %s", filename.c_str());
@@ -91,19 +91,19 @@ KernelAPI::DumpCtrlrSpaceRegs(DumpFilename filename, bool verbose)
 
     // Read all registers in ctrlr space
     for (int i = 0; i < CTLSPC_FENCE; i++) {
-        if (pciMetrics[i].specRev != gRegisters->GetSpecRev())
+        if (!gRegisters->ValidSpecRev(ctlMetrics[i].specRev))
             continue;
 
-        if (pciMetrics[i].size > MAX_SUPPORTED_REG_SIZE) {
+        if (ctlMetrics[i].size > MAX_SUPPORTED_REG_SIZE) {
             uint8_t *buffer;
-            buffer = new uint8_t[pciMetrics[i].size];
-            if (gRegisters->Read(NVMEIO_BAR01, pciMetrics[i].size,
-                pciMetrics[i].offset, buffer, verbose) == false) {
+            buffer = new uint8_t[ctlMetrics[i].size];
+            if (gRegisters->Read(NVMEIO_BAR01, ctlMetrics[i].size,
+                ctlMetrics[i].offset, buffer, verbose) == false) {
                 goto ERROR_OUT;
             } else {
                 string work = "  ";
                 work += gRegisters->FormatRegister(NVMEIO_BAR01,
-                    pciMetrics[i].size, pciMetrics[i].offset, buffer);
+                    ctlMetrics[i].size, ctlMetrics[i].offset, buffer);
                 work += "\n";
                 write(fd, work.c_str(), work.size());
             }
@@ -112,8 +112,8 @@ KernelAPI::DumpCtrlrSpaceRegs(DumpFilename filename, bool verbose)
             break;
         } else {
             work = "  ";    // indent reg values within each capability
-            work += gRegisters->FormatRegister(pciMetrics[i].size,
-                pciMetrics[i].desc, value);
+            work += gRegisters->FormatRegister(ctlMetrics[i].size,
+                ctlMetrics[i].desc, value);
             work += "\n";
             write(fd, work.c_str(), work.size());
         }
@@ -146,7 +146,7 @@ KernelAPI::DumpPciSpaceRegs(DumpFilename filename, bool verbose)
     work = "PCI header registers\n";
     write(fd, work.c_str(), work.size());
     for (int j = 0; j < PCISPC_FENCE; j++) {
-        if (pciMetrics[j].specRev != gRegisters->GetSpecRev())
+        if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev))
             continue;
 
         // All PCI hdr regs don't have an associated capability
@@ -185,7 +185,7 @@ KernelAPI::DumpPciSpaceRegs(DumpFilename filename, bool verbose)
 
         // Read all registers assoc with the discovered capability
         for (int j = 0; j < PCISPC_FENCE; j++) {
-            if (pciMetrics[j].specRev != gRegisters->GetSpecRev())
+            if (!gRegisters->ValidSpecRev(pciMetrics[j].specRev))
                 continue;
 
             if (pciCap->at(i) == pciMetrics[j].cap) {

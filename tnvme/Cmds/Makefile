@@ -41,7 +41,13 @@ SRC =				\
 	baseSecurity.cpp	\
 	securitySend.cpp	\
 	securityRcv.cpp		\
-	asyncEventReq.cpp
+	asyncEventReq.cpp	 \
+	namespaceAttach.cpp \
+	namespaceManagement.cpp \
+	reservationAcquire.cpp  \
+	reservationRegister.cpp \
+	reservationRelease.cpp  \
+	reservationReport.cpp
 
 .SUFFIXES: .cpp
 
@@ -57,7 +63,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 clean:
-	rm -f $(OBJ) Makefile.bak
+	rm -f $(OBJ) $(OUT) Makefile.bak
 
 clobber: clean
 	rm -f $(OUT)

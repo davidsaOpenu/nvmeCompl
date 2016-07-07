@@ -14,10 +14,13 @@
  *  limitations under the License.
  */
 
+
 #include "registers.h"
 #include "tnvme.h"
 #include "../Exception/frmwkEx.h"
 
+#include <boost/assign/list_of.hpp>
+using namespace boost::assign;
 
 // Register metrics (meta data) to aid interfacing with the kernel driver
 #define ZZ(a, b, c, d, e, f, g, h, i)          { b, c, d, e, f, g, h, i },
@@ -78,7 +81,7 @@ Registers::~Registers()
 bool
 Registers::Read(PciSpc reg, uint64_t &value, bool verbose)
 {
-    if (mPciSpcMetrics[reg].specRev != mSpecRev) {
+    if (!ValidSpecRev(mPciSpcMetrics[reg].specRev)) {
         LOG_ERR("Attempting reg (%d) access to incompatible spec release", reg);
         return false;
     }
@@ -90,7 +93,7 @@ Registers::Read(PciSpc reg, uint64_t &value, bool verbose)
 bool
 Registers::Read(CtlSpc reg, uint64_t &value, bool verbose)
 {
-    if (mPciSpcMetrics[reg].specRev != mSpecRev) {
+    if (!ValidSpecRev(mPciSpcMetrics[reg].specRev)) {
         LOG_ERR("Attempting reg (%d) access to incompatible spec release", reg);
         return false;
     }
@@ -189,7 +192,8 @@ Registers::Read(nvme_io_space regSpc, uint16_t rsize, uint16_t roffset,
 bool
 Registers::Write(PciSpc reg, uint64_t value, bool verbose)
 {
-    if (mPciSpcMetrics[reg].specRev != mSpecRev) {
+    const vector<SpecRev> regRevs = mPciSpcMetrics[reg].specRev;
+    if (std::find(regRevs.begin(), regRevs.end(), mSpecRev) == regRevs.end()) {
         LOG_ERR("Attempting reg (%d) access to incompatible spec release", reg);
         return false;
     }
@@ -201,7 +205,8 @@ Registers::Write(PciSpc reg, uint64_t value, bool verbose)
 bool
 Registers::Write(CtlSpc reg, uint64_t value, bool verbose)
 {
-    if (mPciSpcMetrics[reg].specRev != mSpecRev) {
+    const vector<SpecRev> regRevs = mPciSpcMetrics[reg].specRev;
+    if (std::find(regRevs.begin(), regRevs.end(), mSpecRev) == regRevs.end()) {
         LOG_ERR("Attempting reg (%d) access to incompatible spec release", reg);
         return false;
     }
@@ -459,7 +464,7 @@ Registers::DiscoverPciCapabilities()
 
         default:
             LOG_ERR("Decoded an unknown capability ID: 0x%02X", capId);
-            return;
+            continue;
         }
 
         // For each capability we find update our knowledge of each reg's
@@ -491,10 +496,13 @@ Registers::DiscoverPciCapabilities()
         LOG_NRM("Decoding AERCAP capabilities");
         mPciCap.push_back(PCICAP_AERCAP);
         mPciSpcMetrics[PCISPC_AERID].offset = io.offset;
-        for (int i = PCISPC_AERUCES; i <= PCISPC_AERTLP; i++) {
+        for (int i = PCISPC_AERUCES; i <= PCISPC_AERHL; i++) {
             mPciSpcMetrics[i].offset =
                 mPciSpcMetrics[i-1].offset + mPciSpcMetrics[i-1].size;
         }
+        // NVMe skips three registers between AERHL and AERTLP so it must be
+        // set manually instead of adding the size of AERHL to its offset.
+        mPciSpcMetrics[PCISPC_AERTLP].offset = io.offset + 0x38;
     } else {
         LOG_ERR("Decoded an unknown extended capability ID: 0x%04X", capId);
         return;

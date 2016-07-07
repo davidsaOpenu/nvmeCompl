@@ -37,7 +37,7 @@ UnsupportRsvdFields_r10b::UnsupportRsvdFields_r10b(
         "Unsupported DW's and rsvd fields are treated identical, the recipient "
         "shall not check their value. Determine Identify.NN and issue flush "
         "cmd to all namspc, expect success. Then issue same cmd setting all "
-        "unsupported/rsvd fields, expect success. Set: DW0_b15:10, DW2, DW3, "
+        "unsupported/rsvd fields, expect success. Set: DW0_b14:10, DW2, DW3, "
         "DW4, DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15.");
 }
 

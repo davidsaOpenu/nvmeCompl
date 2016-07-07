@@ -18,6 +18,8 @@
 #include "../Exception/frmwkEx.h"
 #include "createResources_r10b.h"
 #include "unsupportRsvdFields_r10b.h"
+#include "unsupportRsvdFields_r11b.h"
+#include "unsupportRsvdFields_r12.h"
 #include "invalidQID_r10b.h"
 #include "deleteAllAtOnce_r10b.h"
 #include "deleteFullQ_r10b.h"
@@ -36,6 +38,20 @@ GrpAdminDeleteIOCQCmd::GrpAdminDeleteIOCQCmd(size_t grpNum) :
     case SPECREV_10b:
         APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminDeleteIOCQCmd)
         APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(InvalidQID_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(DeleteAllAtOnce_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(DeleteFullQ_r10b, GrpAdminDeleteIOCQCmd)
+        break;
+    case SPECREV_11:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r11b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(InvalidQID_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(DeleteAllAtOnce_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_XLEVEL(DeleteFullQ_r10b, GrpAdminDeleteIOCQCmd)
+        break;
+    case SPECREV_12:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminDeleteIOCQCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r12, GrpAdminDeleteIOCQCmd)
         APPEND_TEST_AT_XLEVEL(InvalidQID_r10b, GrpAdminDeleteIOCQCmd)
         APPEND_TEST_AT_XLEVEL(DeleteAllAtOnce_r10b, GrpAdminDeleteIOCQCmd)
         APPEND_TEST_AT_XLEVEL(DeleteFullQ_r10b, GrpAdminDeleteIOCQCmd)

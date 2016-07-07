@@ -23,8 +23,10 @@
 #include "../Utils/kernelAPI.h"
 #include "../Utils/irq.h"
 #include "../Utils/io.h"
+#include "../Utils/queues.h"
 #include "../Cmds/getFeatures.h"
 #include "../Cmds/setFeatures.h"
+#include "../Cmds/featureDefs.h"
 
 namespace GrpAdminSetGetFeatCombo {
 
@@ -101,22 +103,9 @@ FIDErrRecovery_r10b::RunCoreTest()
     union CE ce;
     struct nvme_gen_cq acqMetrics;
 
-    if (gCtrlrConfig->SetState(ST_DISABLE_COMPLETELY) == false)
-        throw FrmwkEx(HERE);
-
-    LOG_NRM("Create admin queues ACQ and ASQ for test lifetime");
-    SharedACQPtr acq = SharedACQPtr(new ACQ(gDutFd));
-    acq->Init(5);
-
-    SharedASQPtr asq = SharedASQPtr(new ASQ(gDutFd));
-    asq->Init(5);
-
-    // All queues will use identical IRQ vector
-    IRQ::SetAnySchemeSpecifyNum(1);
-
-    gCtrlrConfig->SetCSS(CtrlrConfig::CSS_NVM_CMDSET);
-    if (gCtrlrConfig->SetState(ST_ENABLE) == false)
-        throw FrmwkEx(HERE);
+    SharedACQPtr acq;
+    SharedASQPtr asq;
+    Queues::BasicAdminQueueSetup(acq, asq, ACQ_GROUP_ID, ASQ_GROUP_ID);
 
     LOG_NRM("Create Get features and set features cmds");
     SharedGetFeaturesPtr getFeaturesCmd =
@@ -125,9 +114,9 @@ FIDErrRecovery_r10b::RunCoreTest()
         SharedSetFeaturesPtr(new SetFeatures());
 
     LOG_NRM("Set and Get features for error recovery (FID = 0x%x)",
-        BaseFeatures::FID_ERR_RECOVERY);
-    getFeaturesCmd->SetFID(BaseFeatures::FID_ERR_RECOVERY);
-    setFeaturesCmd->SetFID(BaseFeatures::FID_ERR_RECOVERY);
+            FID[FID_ERR_RECOVERY]);
+    getFeaturesCmd->SetFID(FID[FID_ERR_RECOVERY]);
+    setFeaturesCmd->SetFID(FID[FID_ERR_RECOVERY]);
 
     uint8_t tlerMismatch = 0;
 

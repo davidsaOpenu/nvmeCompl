@@ -205,8 +205,25 @@ SetFeatures::SetErrRecoveryTLER(uint16_t tler)
 uint16_t
 SetFeatures::GetErrRecoveryTLER() const
 {
-    LOG_NRM("Getting Error recover retry timeout (TLER)");
+    LOG_NRM("Getting error recovery retry timeout (TLER)");
     return GetWord(11, 0);
+}
+
+
+void
+SetFeatures::SetErrRecoveryDULBE(bool dulbe)
+{
+    LOG_NRM("Setting error recovery dealloc or unwritten LBA err EN (DULBE): "
+        "0x%05X", dulbe);
+    SetBit(dulbe, 11, 16);
+}
+
+
+bool
+SetFeatures::GetErrRecoveryDULBE() const
+{
+    LOG_NRM("Getting error recovery dealloc or unwritten LBA err EN (DULBE)");
+    return GetBit(11, 16) != 0;
 }
 
 
@@ -433,3 +450,44 @@ SetFeatures::GetSWProgressMarkerPBSLC() const
     LOG_NRM("Getting software progress marker (PBSLC)");
     return GetByte(11, 0);
 }
+
+
+void
+SetFeatures::SetAutoPSTransAPSTE(bool enable)
+{
+    LOG_NRM("Setting autonomous PS transision enable (APSTE): %d", enable);
+    SetBit(enable, 11, 0);
+}
+
+
+bool
+SetFeatures::GetAutoPSTransAPSTE() const
+{
+    LOG_NRM("Getting autonomous PS transision enable (APSTE)");
+    return GetBit(11, 0);
+}
+
+
+void
+SetFeatures::SetSave(bool save)
+{
+	if (save)
+		LOG_NRM("Setting SV field to true");
+	else
+		LOG_NRM("Setting SV field to false");
+	SetBit(save, 10, 31);
+}
+
+
+void
+SetFeatures::SetUnsafePS(uint8_t ps)
+{
+    LOG_NRM("Setting power state (PS): 0x%02X", ps);
+
+    uint8_t work = GetByte(11, 0);
+    work &= ~BYTE_BITMASK_PS;
+    work |= (ps & BYTE_BITMASK_PS);
+    SetByte(work, 11, 0);
+}
+
+

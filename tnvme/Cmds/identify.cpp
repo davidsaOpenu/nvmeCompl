@@ -14,12 +14,21 @@
  *  limitations under the License.
  */
 
+#include <boost/format.hpp>
+#include <assert.h>
 #include <string.h>
 #include "identify.h"
 #include "../Utils/buffers.h"
 #include "../Utils/fileSystem.h"
 #include "../Singletons/regDefs.h"
 #include "../globals.h"
+
+#define ZZ(a,b,c,d,e,f) a,
+IdCtrlrCap IDCTRLRCAP_PSD[] = {
+    IDCTRLRCAP_PSD_TABLE
+    IDCTRLRCAP_FENCE    // always must be the last element
+};
+#undef ZZ
 
 #define CNS_BITMASK         0x01
 
@@ -29,7 +38,7 @@ const uint16_t Identify::IDEAL_DATA_SIZE =  4096;
 
 
 // Register metrics (ID Cmd Ctrlr Cap struct) to aid interfacing with the dnvme
-#define ZZ(a, b, c, d)         { b, c, d },
+#define ZZ(a, b, c, d, e, f)         { b, c, d, e, f},
 IdentifyDataType Identify::mIdCtrlrCapMetrics[] =
 {
     IDCTRLRCAP_TABLE
@@ -37,7 +46,7 @@ IdentifyDataType Identify::mIdCtrlrCapMetrics[] =
 #undef ZZ
 
 // Register metrics (ID Cmd namespace struct) to aid interfacing with the dnvme
-#define ZZ(a, b, c, d)         { b, c, d },
+#define ZZ(a, b, c, d, e, f)         { b, c, d, e, f },
 IdentifyDataType Identify::mIdNamespcType[] =
 {
     IDNAMESPC_TABLE
@@ -62,28 +71,34 @@ Identify::~Identify()
 
 
 void
-Identify::SetCNS(bool ctrlr)
+Identify::SetCNS(uint8_t ctrlr)
 {
     LOG_NRM("Setting CNS");
-    uint8_t curVal = GetByte(10, 0);
-    if (ctrlr)
-        curVal |= CNS_BITMASK;
-    else
-        curVal &= ~CNS_BITMASK;
-    SetByte(curVal, 10, 0);
+    SetByte(ctrlr, 10, 0);
 }
 
 
-bool
+uint8_t
 Identify::GetCNS() const
 {
-    uint8_t curVal = GetByte(10, 0);
-    if (curVal & CNS_BITMASK) {
-        LOG_NRM("Getting CNS=1");
-        return true;
-    }
-    LOG_NRM("Getting CNS=0");
-    return false;
+    LOG_NRM("Getting CNS");
+    return GetByte(10, 0);;
+}
+
+
+void
+Identify::SetCNTID(uint16_t cntid)
+{
+    LOG_NRM("Setting CNTID");
+    SetWord(cntid, 10, 1);
+}
+
+
+uint16_t
+Identify::GetCNTID() const
+{
+    LOG_NRM("Getting CNTID");
+    return GetWord(10, 1);
 }
 
 
@@ -92,7 +107,7 @@ Identify::GetValue(IdCtrlrCap field) const
 {
     if (field >= IDCTRLRCAP_FENCE)
         throw FrmwkEx(HERE, "Unknown ctrlr cap field: %d", field);
-    else if (GetCNS() == false)
+    else if (!containsCtrlrDataStruct())
         throw FrmwkEx(HERE, "This cmd does not contain a ctrlr data struct");
 
     return GetValue(field, mIdCtrlrCapMetrics);
@@ -104,10 +119,37 @@ Identify::GetValue(IdNamespc field) const
 {
     if (field >= IDNAMESPC_FENCE)
         throw FrmwkEx(HERE, "Unknown namespace field: %d", field);
-    else if (GetCNS())
+    else if (!containsNamspcDataStruct()) {
         throw FrmwkEx(HERE,"This cmd does not contain a namspc data struct");
+    }
 
     return GetValue(field, mIdNamespcType);
+}
+
+
+uint32_t
+Identify::GetValue(uint32_t entry) const
+{
+    uint8_t byte;
+    uint8_t value = 0;
+    uint16_t entrySize;
+    uint64_t offset;
+
+    if (containsNamspcList())
+        entrySize = NS_LIST_ENTRY_SIZE;
+    else if (containsCtrlrList())
+        entrySize = CTLR_LIST_ENTRY_SIZE;
+    else
+        throw FrmwkEx(HERE,"This cmd does not contain a list");
+
+    offset = entry * entrySize;
+
+    for (uint16_t i = 0; i < entrySize; i++) {
+        byte = (GetROPrpBuffer())[offset + i];
+        value |= ((uint32_t)byte << (i*8));
+    }
+    LOG_NRM("List[%d] = 0x%08X", entry, value);
+    return value;
 }
 
 
@@ -163,74 +205,210 @@ Identify::Dump(DumpFilename filename, string fileHdr) const
 }
 
 
-void
-Identify::Dump(FILE *fp, int field, IdentifyDataType *idData) const
+IdPowerStateDescStruct
+Identify::getPSDStruct(const uint8_t psdNum) const
 {
-    const uint8_t *data;
+    if (psdNum > GetValue(IDCTRLRCAP_NPSS, mIdCtrlrCapMetrics))
+        throw FrmwkEx(HERE, "Power state %d not supported by ctrlr", psdNum);
+
+    IdentifyDataType psd = mIdCtrlrCapMetrics[IDCTRLRCAP_PSD[psdNum]];
+
+    return *(IdPowerStateDescStruct*) &((GetROPrpBuffer())[psd.offset]);;
+}
+
+
+// TODO Remove the getPSD below for the updated function above
+IdPowerStateDescUnpacked
+Identify::getPSD(const uint8_t psdNum) const
+{
+    IdPowerStateDescUnpacked desc;
+
+    if (psdNum > GetValue(IDCTRLRCAP_NPSS, mIdCtrlrCapMetrics))
+        throw FrmwkEx(HERE, "Power state %d not supported by ctrlr", psdNum);
+
+    IdentifyDataType psd = mIdCtrlrCapMetrics[IDCTRLRCAP_PSD[psdNum]];
+    const uint8_t *data = &((GetROPrpBuffer())[psd.offset]);
+    uint64_t buf = 0;
+
+    // PSD is 32 bytes long so need to parse the buffer directly
+    desc.MP     = (*((uint16_t *)data) & 0xffff);
+    data += 2;
+    desc.RES0   = (*((uint8_t *)data)  & 0xff);
+    data += 1;
+    desc.MPS    = (*((uint8_t *)data)  & 0x01);
+    desc.NOPS   = (*((uint8_t *)data)  & 0x02) >> 1;
+    desc.RES1   = (*((uint8_t *)data)  & 0xfc) >> 2;
+    data += 1;
+    desc.ENLAT  = (*((uint32_t *)data) & 0xffffffff);
+    data += 4;
+    desc.EXLAT  = (*((uint32_t *)data) & 0xffffffff);
+    data += 4;
+    desc.RRT    = (*((uint8_t *)data)  & 0x1f);
+    desc.RES2   = (*((uint8_t *)data)  & 0xe0) >> 5;
+    data += 1;
+    desc.RRL    = (*((uint8_t *)data)  & 0x1f);
+    desc.RES3   = (*((uint8_t *)data)  & 0xe0) >> 5;
+    data += 1;
+    desc.RWT    = (*((uint8_t *)data)  & 0x1f);
+    desc.RES4   = (*((uint8_t *)data)  & 0xe0) >> 5;
+    data += 1;
+    desc.RWL    = (*((uint8_t *)data)  & 0x1f);
+
+    // Parse RES5 section 1
+    buf        |= ((uint64_t)*((uint8_t *)data)  & 0xe0) >> 5;
+    data += 1;
+    buf        |= ((uint64_t)*((uint32_t *)data) & 0xffffffff) << 3;
+    data += 4;
+    buf        |= ((uint64_t)*((uint32_t *)data) & 0x1fffffff) << 35;
+    desc.RES5_1 = buf;
+
+    // Parse RES5 section 2; section 3 will be last 5 bits of last chunk
+    buf = 0;
+    buf        |= ((uint64_t)*((uint32_t *)data) & 0xe0000000) >> 29;
+    data += 4;
+    buf        |= ((uint64_t)*((uint32_t *)data) & 0xffffffff) << 3;
+    data += 4;
+    buf        |= ((uint64_t)*((uint32_t *)data) & 0x07ffffff) << 35;
+    desc.RES5_2 = buf;
+    desc.RES5_3 = (*((uint32_t *)data) & 0xf8000000) >> 27;
+
+    return desc;
+}
+
+
+void
+Identify::getStr(const IdentifyDataType idData, string *const output) const
+{
+    getStr(idData.offset, idData.length, output);
+}
+
+void
+Identify::getStr(unsigned long offset, unsigned long length,
+    string * const output) const
+{
+    unsigned long addr = offset;
+    const uint8_t *data = &((GetROPrpBuffer())[offset]);
+    unsigned long dumpLen = length;
     const int BUF_SIZE = 40;
     char work[BUF_SIZE];
-    string output;
-    unsigned long dumpLen = idData[field].length;
 
-    fprintf(fp, "\n%s\n", idData[field].desc);
-
-    data = &((GetROPrpBuffer())[idData[field].offset]);
-    if ((idData[field].length + idData[field].offset) > GetPrpBufferSize()) {
-        LOG_ERR("Detected illegal definition in IDxxxxx_TABLE");
-        throw FrmwkEx(HERE, "Reference calc (%d): %d + %d >= %ld", field,
-            idData[field].length, idData[field].offset, GetPrpBufferSize());
-    }
-
-    unsigned long addr = idData[field].offset;
     switch (dumpLen) {
     case 1:
         snprintf(work, BUF_SIZE, "0x%08X: 0x%02X", (uint32_t)addr,
             *((uint8_t *)data));
-        output += work;
-        fprintf(fp, "%s\n", output.c_str());
+        *output += work;
         break;
 
     case 2:
         snprintf(work, BUF_SIZE, "0x%08X: 0x%04X", (uint32_t)addr,
             *((uint16_t *)data));
-        output += work;
-        fprintf(fp, "%s\n", output.c_str());
+        *output += work;
         break;
 
     case 4:
         snprintf(work, BUF_SIZE, "0x%08X: 0x%08X", (uint32_t)addr,
             *((uint32_t *)data));
-        output += work;
-        fprintf(fp, "%s\n", output.c_str());
+        *output += work;
         break;
 
     case 8:
         snprintf(work, BUF_SIZE, "0x%08X: 0x%016lX", (uint32_t)addr,
             *((uint64_t *)data));
-        output += work;
-        fprintf(fp, "%s\n", output.c_str());
+        *output += work;
         break;
 
     default:
         for (unsigned long j = 0; j < dumpLen; j++, addr++) {
             if ((j % 16) == 15) {
                 snprintf(work, BUF_SIZE, " %02X\n", *data++);
-                output += work;
-                fprintf(fp, "%s", output.c_str());
-                output.clear();
+                *output += work;
             } else if ((j % 16) == 0) {
                 snprintf(work, BUF_SIZE, "0x%08X: %02X",
                     (uint32_t)addr, *data++);
-                output += work;
+                *output += work;
             } else {
                 snprintf(work, BUF_SIZE, " %02X", *data++);
-                output += work;
+                *output += work;
             }
         }
-        if (output.length() != 0)
-            fprintf(fp, "%s\n", output.c_str());
         break;
     }
+}
+
+
+void
+Identify::log(IdCtrlrCap field) const
+{
+    string output;
+    getStr(mIdCtrlrCapMetrics[field], &output);
+    if (strlen(mIdCtrlrCapMetrics[field].desc) + output.length() + 2 > 55) {
+        LOG_NRM("%s:\n%s", mIdCtrlrCapMetrics[field].desc, output.c_str());
+    } else {
+        LOG_NRM("%s: %s", mIdCtrlrCapMetrics[field].desc, output.c_str());
+    }
+}
+
+
+void
+Identify::log(IdNamespc field) const
+{
+    string output;
+    getStr(mIdNamespcType[field], &output);
+    if (strlen(mIdNamespcType[field].desc) + output.length() + 2 > 55) {
+        LOG_NRM("%s:\n%s", mIdNamespcType[field].desc, output.c_str());
+    } else {
+        LOG_NRM("%s: %s", mIdNamespcType[field].desc, output.c_str());
+    }
+}
+
+
+void
+Identify::log(uint32_t entry) const
+{
+    string output;
+    string desc;
+    uint16_t entrySize;
+    uint8_t cns = GetCNS();
+
+    if (cns == CNS_NamespaceListActive
+     || cns == CNS_NamespaceListSubsystem) // Namespace List
+    {
+        entrySize = NS_LIST_ENTRY_SIZE;
+        desc = str(boost::format("NSList[%d]") % entry);
+    }
+    else if (cns == CNS_ControllerListAttachedToNSID
+          || cns == CNS_ControllerListSubsystem) // Controller List
+    {
+        entrySize = CTLR_LIST_ENTRY_SIZE;
+        desc = str(boost::format("CtrlList[%d]") % entry);
+    }
+    else
+        throw FrmwkEx(HERE,"This cmd does not contain a list");
+
+    getStr(entry * entrySize, entrySize, &output);
+    if (desc.length() + output.length() + 2 > 55) {
+        LOG_NRM("%s:\n%s", desc.c_str(), output.c_str());
+    } else {
+        LOG_NRM("%s: %s", desc.c_str(), output.c_str());
+    }
+}
+
+
+void
+Identify::Dump(FILE *fp, int field, IdentifyDataType *idData) const
+{
+    string output;
+
+    fprintf(fp, "\n%s\n", idData[field].desc);
+
+    if ((idData[field].length + idData[field].offset) > GetPrpBufferSize()) {
+        LOG_ERR("Detected illegal definition in IDxxxxx_TABLE");
+        throw FrmwkEx(HERE, "Reference calc (%d): %d + %d >= %ld", field,
+            idData[field].length, idData[field].offset, GetPrpBufferSize());
+    }
+
+    getStr(idData[field], &output);
+    fprintf(fp, "%s\n", output.c_str());
 }
 
 
@@ -239,7 +417,7 @@ Identify::GetLBAFormat() const
 {
     LBAFormat lbaFormat;
 
-    if (GetCNS())
+    if (!containsNamspcDataStruct())
         throw FrmwkEx(HERE, "This cmd does not contain a namspc data struct");
 
     uint64_t flbas = GetValue(IDNAMESPC_FLBAS);
@@ -269,7 +447,7 @@ Identify::GetLBADataSize() const
 uint32_t
 Identify::GetMaxDataXferSize() const
 {
-    if (GetCNS() == false)
+    if (GetCNS() == 0)
         throw FrmwkEx(HERE, "This cmd does not contain a ctrlr data struct");
 
     uint8_t mdts = GetValue(IDCTRLRCAP_MDTS);
@@ -285,4 +463,83 @@ Identify::GetMaxDataXferSize() const
 
     LOG_NRM("Calculated Maximum Data Transfer Size (bytes) = 0x%08X", mdtsCalc);
     return mdtsCalc;
+}
+
+
+bool
+Identify::isZeroFilled(void) const
+{
+    const uint8_t *data = GetROPrpBuffer();
+    const uint8_t cns = GetCNS();
+
+    switch (cns) {
+    case CNS_Controller:
+        for (int i = 0; i < IDCTRLRCAP_FENCE; i++) {
+            for (unsigned long j = 0; j < mIdCtrlrCapMetrics[i].length; j++) {
+                if (*data++ != 0)
+                    return false;
+            }
+        }
+        break;
+    case CNS_Namespace:
+    case CNS_NamespaceStructSubsystem:
+        for (int i = 0; i < IDNAMESPC_FENCE; i++) {
+            for (unsigned long j = 0; j < mIdNamespcType[i].length; j++) {
+                if (*data++ != 0)
+                    return false;
+            }
+        }
+        break;
+    case CNS_NamespaceListActive:
+    case CNS_NamespaceListSubsystem:
+        for (int i = 0; i < NS_LIST_SIZE; i++) {
+            if (*data++ != 0)
+                return false;
+        }
+        break;
+    case CNS_ControllerListAttachedToNSID:
+    case CNS_ControllerListSubsystem:
+        for (int i = 0; i < CTLR_LIST_SIZE; i++) {
+            if (*data++ != 0)
+                return false;
+        }
+        break;
+    default:
+        throw FrmwkEx(HERE, "CNS currently unsupported: 0x%x", GetCNS());
+    }
+
+    return true;
+}
+
+
+bool
+Identify::containsNamspcDataStruct(void) const
+{
+    uint8_t cns = GetCNS();
+    return cns == CNS_Namespace || cns == CNS_NamespaceStructSubsystem;
+}
+
+
+bool
+Identify::containsCtrlrDataStruct(void) const
+{
+    uint8_t cns = GetCNS();
+    return cns == CNS_Controller;
+}
+
+
+bool
+Identify::containsNamspcList(void) const
+{
+    uint8_t cns = GetCNS();
+    return cns == CNS_NamespaceListActive || cns == CNS_NamespaceListSubsystem;
+}
+
+
+bool
+Identify::containsCtrlrList(void) const
+{
+    uint8_t cns = GetCNS();
+    return cns == CNS_ControllerListAttachedToNSID
+        || cns == CNS_ControllerListSubsystem;
 }

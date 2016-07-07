@@ -18,6 +18,10 @@
 #define _FIDIRQVEC_r10b_H_
 
 #include "test.h"
+#include "../Cmds/getFeatures.h"
+#include "../Cmds/setFeatures.h"
+#include "../Queues/acq.h"
+#include "../Queues/asq.h"
 
 namespace GrpAdminSetGetFeatCombo {
 
@@ -29,7 +33,7 @@ namespace GrpAdminSetGetFeatCombo {
  * 1) See notes in the header file of the Test base class
  * \endverbatim
  */
-class FIDIRQVec_r10b : public Test
+class FIDIRQVec_r10b : public virtual Test
 {
 public:
     FIDIRQVec_r10b(string grpName, string testName);
@@ -48,6 +52,11 @@ protected:
     virtual void RunCoreTest();
     virtual RunType RunnableCoreTest(bool preserve);
 
+    virtual bool sendFeatures(SharedASQPtr asq, SharedACQPtr acq, uint8_t cd,
+        uint16_t ivec);
+
+    SharedGetFeaturesPtr getFeaturesCmd;
+    SharedSetFeaturesPtr setFeaturesCmd;
 
 private:
     ///////////////////////////////////////////////////////////////////////////

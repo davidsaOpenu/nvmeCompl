@@ -31,17 +31,17 @@ using namespace std;
 #define APPNAME         "tnvme"
 #define LEVEL           APPNAME
 #define LOG_NRM(fmt, ...)       \
-    fprintf(stderr, "%s:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__);
+    fprintf(stderr, "%s:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__)
 #define LOG_ERR(fmt, ...)       \
-    fprintf(stderr, "%s-err:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__);
+    fprintf(stderr, "%s-err:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__)
 #define LOG_WARN(fmt, ...)      \
-    fprintf(stderr, "%s-warn:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__);
+    fprintf(stderr, "%s-warn:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__)
 
 #ifdef DEBUG
 #define LOG_DBG(fmt, ...)       \
-    fprintf(stderr, "%s-dbg:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__);
+    fprintf(stderr, "%s-dbg:%s:%d: " fmt "\n", LEVEL, HERE, ## __VA_ARGS__)
 #else
-#define LOG_DBG(fmt, ...)       ;
+#define LOG_DBG(fmt, ...)
 #endif
 
 
@@ -69,6 +69,9 @@ using namespace std;
 
 typedef enum {
     SPECREV_10b,             // http://www.nvmexpress.org/ spec. rev. 1.0b
+    SPECREV_11,              // http://www.nvmexpress.org/ spec. rev. 1.1
+    SPECREV_12,              // http://www.nvmexpress.org/ spec. rev. 1.2
+	SPECREV_121,              // http://www.nvmexpress.org/ spec. rev. 1.2.1
     SPECREVTYPE_FENCE        // always must be last element
 } SpecRev;
 
@@ -149,7 +152,7 @@ struct Format {
 
 struct IdentifyDUT {
     uint32_t            nsid;   // The Identify.DW1.NSID field
-    bool                cns;    // The Identify.DW10.CNS field
+    uint8_t             cns;    // The Identify.DW10.CNS field
     vector<uint8_t>     raw;    // Raw identify data payload to compare against
     vector<uint8_t>     mask;   // Mask set bits indicate raw[x] bits to compare
 };
@@ -174,6 +177,7 @@ struct CmdLine {
     bool            postfail;
     bool            rsvdfields;
     bool            preserve;
+    bool            setAD;
     size_t          loop;
     SpecRev         rev;
     TestTarget      detail;
@@ -190,5 +194,6 @@ struct CmdLine {
     string          dump;
 };
 
+extern char revision_warning[1024];
 
 #endif

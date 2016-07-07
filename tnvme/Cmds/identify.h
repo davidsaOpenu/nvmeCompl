@@ -25,7 +25,7 @@ class Identify;    // forward definition
 typedef boost::shared_ptr<Identify>             SharedIdentifyPtr;
 typedef boost::shared_ptr<const Identify>       ConstSharedIdentifyPtr;
 #define CAST_TO_IDENTIFY(shared_trackable_ptr)  \
-        boost::shared_polymorphic_downcast<Identify>(shared_trackable_ptr);
+        boost::dynamic_pointer_cast<Identify>(shared_trackable_ptr);
 
 
 /**
@@ -50,9 +50,11 @@ public:
      * @note See base class for access to the NSID field if passing false
      * @param ctrlr Pass true for controller, otherwise false for namespace
      */
-    void SetCNS(bool ctrlr);
-    /// @return true for controller data, false for namespace data
-    bool GetCNS() const;
+    void SetCNS(uint8_t ctrlr);
+    uint8_t GetCNS() const;
+
+    void SetCNTID(uint16_t cntid);
+    uint16_t GetCNTID() const;
 
     /**
      * Retrieve the specified PRP payload parameter. If the value can fit within
@@ -65,6 +67,16 @@ public:
      */
     uint64_t GetValue(IdCtrlrCap field) const;
     uint64_t GetValue(IdNamespc field) const;
+
+    /**
+     * Get specified entry number from list.  The correct data structure
+     * (namespace or controller list) must be backing this cmd or it will
+     * throw.
+     * @param entry Pass which entry in the list to return
+     * @return The value, otherwise will throw if the incorrect data structure
+     *          is backing this cmd.
+     */
+    uint32_t GetValue(uint32_t entry) const;
 
     /**
      * If this cmd's payload contains a namespace data structure, then this
@@ -98,6 +110,47 @@ public:
      */
     virtual void Dump(DumpFilename filename, string fileHdr) const;
 
+    /**
+     * Log the given field using the LOG_NRM macro from tnvme.h.
+     * @param field the field whose value should be printed
+     */
+    virtual void log(IdCtrlrCap field) const;
+
+    /**
+     * Log the given field using the LOG_NRM macro from tnvme.h.
+     * @param field the field whose value should be printed
+     */
+    virtual void log(IdNamespc field) const;
+
+    /**
+     * Log the given field using the LOG_NRM macro from tnvme.h.
+     * @param entry the entry in the list whose value should be printed
+     */
+    virtual void log(uint32_t entry) const;
+
+    /**
+     * Get the power state descriptor (PSD) for the given power state number.
+     * throws if psdNum is greater than idCtrlrCap.NPSS
+     * @param psdNum the number of the PSD to retrieve
+     */
+    IdPowerStateDescStruct getPSDStruct(const uint8_t psdNum) const;
+    IdPowerStateDescUnpacked getPSD(const uint8_t psdNum) const;
+
+    /**
+     * Get whether the identify command contains a zero filled data buffer.
+     */
+    bool isZeroFilled(void) const;
+
+    /**
+     * Get the type of data pointed at by the data buffer based on the CNS
+     * value.  Returns true if the data contains the specified data structured;
+     * false otherwise.
+     */
+    bool containsNamspcDataStruct(void) const;
+    bool containsCtrlrDataStruct(void) const;
+    bool containsNamspcList(void) const;
+    bool containsCtrlrList(void) const;
+
 
 private:
     /// Details the fields within the identify controller capabilities struct
@@ -109,6 +162,9 @@ private:
     /// General functions to support the more specific public versions
     uint64_t GetValue(int field, IdentifyDataType *idData) const;
     void Dump(FILE *fp, int field, IdentifyDataType *idData) const;
+    void getStr(const IdentifyDataType idData, string *const work) const;
+    void getStr(unsigned long offset, unsigned long length,
+        string * const output) const;
 };
 
 

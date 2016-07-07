@@ -102,7 +102,7 @@ MandatorySMART_r10b::RunCoreTest()
     // Lookup objs which were created in a prior test within group
     
     string work;
-    uint64_t i;
+    //uint64_t i;
     
     SharedASQPtr asq = CAST_TO_ASQ(gRsrcMngr->GetObj(ASQ_GROUP_ID))
     SharedACQPtr acq = CAST_TO_ACQ(gRsrcMngr->GetObj(ACQ_GROUP_ID))
@@ -124,7 +124,7 @@ MandatorySMART_r10b::RunCoreTest()
     IssueGetLogPgCmdLessDwords(asq, acq, getLogPgCmd, getLogPageMem);
 
     LOG_NRM("If SMART supported per namspc, Reissue cmd for valid NSID's");
-    if (logPageAttr) {
+    if (logPageAttr & LPA_SMART_PER_NAMSPC) {
         for (uint32_t i = 1; i <= nn; i++) {
             LOG_NRM("Issue Get log page cmd with NSID = %u", i);
             getLogPgCmd->SetNSID(i);

@@ -25,6 +25,7 @@ Test::Test(string grpName, string testName, SpecRev specRev)
     mSpecRev = specRev;
     mGrpName = grpName;
     mTestName = testName;
+    mResult = TR_SUCCESS;
 }
 
 
@@ -39,7 +40,8 @@ Test::~Test()
 
 Test::Test(const Test &other) :
     mSpecRev(other.mSpecRev), mGrpName(other.mGrpName),
-    mTestName(other.mTestName), mTestDesc(other.mTestDesc)
+    mTestName(other.mTestName), mTestDesc(other.mTestDesc),
+    mResult(other.mResult)
 
 {
     ///////////////////////////////////////////////////////////////////////////
@@ -60,11 +62,12 @@ Test::operator=(const Test &other)
     mGrpName = other.mGrpName;
     mTestName = other.mTestName;
     mTestDesc = other.mTestDesc;
+    mResult = other.mResult;
     return *this;
 }
 
 
-bool
+TestResult
 Test::Run()
 {
     try {
@@ -76,9 +79,9 @@ Test::Run()
 
         // What do the PCI registers say about errors that may have occurred?
         if (GetStatusRegErrors() == false)
-            return false;
+            return TR_FAIL;
     } catch (FrmwkEx &ex) {
-        return false;
+        return TR_FAIL;
     } catch (...) {
         // If this exception is thrown from some library which tnvme links
         // with then there is nothing that can be done about this. However,
@@ -90,9 +93,9 @@ Test::Run()
         LOG_ERR("*     see class note in file Exception/frmwkEx.h     *");
         LOG_ERR("******************************************************");
         LOG_ERR("******************************************************");
-        return false;
+        return TR_FAIL;
     }
-    return true;
+    return mResult;
 }
 
 

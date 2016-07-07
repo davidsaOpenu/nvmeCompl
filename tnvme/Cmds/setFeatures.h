@@ -24,7 +24,7 @@ class SetFeatures;    // forward definition
 typedef boost::shared_ptr<SetFeatures>              SharedSetFeaturesPtr;
 typedef boost::shared_ptr<const SetFeatures>        ConstSharedSetFeaturesPtr;
 #define CAST_TO_SETFEATURES(shared_trackable_ptr)   \
-        boost::shared_polymorphic_downcast<SetFeatures>(shared_trackable_ptr);
+        boost::dynamic_pointer_cast<SetFeatures>(shared_trackable_ptr);
 
 
 /**
@@ -90,6 +90,14 @@ public:
      */
     void SetErrRecoveryTLER(uint16_t tler);
     uint16_t GetErrRecoveryTLER() const;
+
+    /**
+     * Set the error recovery deallocated or unwritten logical block error
+     * enable bit.
+     * @param dulbe The bit value to set; true = 1, false = 0
+     */
+    void SetErrRecoveryDULBE(bool dulbe);
+    bool GetErrRecoveryDULBE() const;
 
     /**
      * Set the volatile write cache to either enabled or disabled.
@@ -158,6 +166,26 @@ public:
      */
     void SetSWProgressMarkerPBSLC(uint8_t pbslc);
     uint8_t GetSWProgressMarkerPBSLC() const;
+
+    /**
+     * Set the autonomous power state transition enable bit.
+     * @param enable auto PS enabled or disabled
+     */
+    void SetAutoPSTransAPSTE(bool enable);
+    bool GetAutoPSTransAPSTE() const;
+
+    /**
+     * Sets Save (SV) field that forces the controller to save the
+     * attribute through all power states and resets
+     * @param saveable sets the save (SV) field to either 1 or 0
+     */
+    void SetSave(bool save);
+
+    /**
+     * Set Power State to a potentially unsafe power state.
+     * @param ps power state to be set to
+     */
+    void SetUnsafePS(uint8_t ps);
 };
 
 

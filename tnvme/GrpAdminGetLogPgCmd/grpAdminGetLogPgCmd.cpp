@@ -18,10 +18,14 @@
 #include "createResources_r10b.h"
 #include "prp1_r10b.h"
 #include "prp1PRP2_r10b.h"
-#include "unsupportRrvdFields_r10b.h"
+#include "unsupportRsvdFields_r10b.h"
+#include "unsupportRsvdFields_r11b.h"
+#include "unsupportRsvdFields_r12.h"
 #include "numDIsAdhered_r10b.h"
 #include "invalidLogPageNVMSet_r10b.h"
+#include "invalidLogPageNVMSet_r11b.h"
 #include "invalidNamspc_r10b.h"
+#include "invalidNamspc_r11a.h"
 #include "mandatoryErrInfo_r10b.h"
 #include "mandatorySMART_r10b.h"
 #include "mandatoryFW_r10b.h"
@@ -42,10 +46,34 @@ GrpAdminGetLogPgCmd::GrpAdminGetLogPgCmd(size_t grpNum) :
         APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(PRP1_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(PRP1PRP2_r10b, GrpAdminGetLogPgCmd)
-        APPEND_TEST_AT_YLEVEL(UnsupportRrvdFields_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(NUMDIsAdhered_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(InvalidLogPageNVMSet_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(InvalidNamspc_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatoryErrInfo_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatorySMART_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatoryFW_r10b, GrpAdminGetLogPgCmd)
+        break;
+    case SPECREV_11:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(PRP1_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(PRP1PRP2_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r11b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(NUMDIsAdhered_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidLogPageNVMSet_r11b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidNamspc_r11a, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatoryErrInfo_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatorySMART_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(MandatoryFW_r10b, GrpAdminGetLogPgCmd)
+        break;
+    case SPECREV_12:
+        APPEND_TEST_AT_XLEVEL(CreateResources_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(PRP1_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(PRP1PRP2_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(UnsupportRsvdFields_r12, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(NUMDIsAdhered_r10b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidLogPageNVMSet_r11b, GrpAdminGetLogPgCmd)
+        APPEND_TEST_AT_YLEVEL(InvalidNamspc_r11a, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(MandatoryErrInfo_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(MandatorySMART_r10b, GrpAdminGetLogPgCmd)
         APPEND_TEST_AT_YLEVEL(MandatoryFW_r10b, GrpAdminGetLogPgCmd)
